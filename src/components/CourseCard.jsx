@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Star, Clock, PlayCircle, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
+import './styles.css';
 export default function CourseCard({ course, isLoading = false }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);

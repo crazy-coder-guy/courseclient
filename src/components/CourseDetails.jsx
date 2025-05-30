@@ -473,16 +473,7 @@ export default function UdemyCourseDetails() {
                   {truncateDescription(course.description)}
                 </p>
               )}
-              <div className="flex items-center gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="flex">
-                    {renderStars(course.rating)}
-                  </div>
-                  <span className="text-yellow-400 font-bold">{course.rating}</span>
-                  <span className="text-gray-400">({course.total_ratings?.toLocaleString()} ratings)</span>
-                </div>
-                <span className="text-gray-400">{course.total_students?.toLocaleString()} students</span>
-              </div>
+             
               {course.instructor_name && (
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-gray-400">Created by</span>
@@ -617,12 +608,7 @@ export default function UdemyCourseDetails() {
                           </svg>
                           <span className="text-sm text-gray-700">Access on mobile and TV</span>
                         </div>
-                        <div className="course-badge">
-                          <svg className="w-5 h-5 text-gray-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-sm text-gray-700">Full lifetime access</span>
-                        </div>
+                       
                         {course.subtitle_available && (
                           <div className="course-badge">
                             <svg className="w-5 h-5 text-gray-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -804,9 +790,7 @@ export default function UdemyCourseDetails() {
                       {hasPurchased ? 'Start Learning' : 'Buy Now'}
                     </button>
                   </div>
-                  <div className="text-center mb-6">
-                    <p className="text-sm text-gray-600">Full Lifetime Access</p>
-                  </div>
+                  
                   <div className="flex gap-3 mb-6">
                     <button className="flex-1 border border-gray-300 hover:bg-gray-50 py-2 px-3 text-sm no-border-radius transition-colors flex items-center justify-center gap-2">
                       <Share className="w-4 h-4" />

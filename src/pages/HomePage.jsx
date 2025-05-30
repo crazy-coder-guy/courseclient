@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import CourseCard from '../components/CourseCard';
-
+import './styles.css'; // Import the CSS file
 export default function HomePage() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,12 +50,12 @@ export default function HomePage() {
         <div className="max-w-[1340px] mx-auto px-6">
           <div className="flex space-x-8 overflow-x-auto">
             {[
-              'Handloom Weaving',
+              'Desigining Tools',
               'Color Matching',
               'Zari Work',
               'Design Sketching',
               'Thread Techniques',
-              'Blouse Stitching',
+              'Embroidery',
               'Traditional Motifs',
             ].map((category, index) => (
               <button
