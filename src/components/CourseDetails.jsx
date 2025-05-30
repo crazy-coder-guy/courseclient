@@ -571,10 +571,10 @@ export default function UdemyCourseDetails() {
           </div>
         )}
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
-          {course.last_updated && (
+          {course.updated_at && (
             <div className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
-              <span>Last updated {new Date(course.last_updated).toLocaleDateString()}</span>
+              <span>Last updated {new Date(course.updated_at).toLocaleDateString()}</span>
             </div>
           )}
           {course.course_language && (

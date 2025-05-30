@@ -117,12 +117,7 @@ function SignUpForm() {
       localStorage.setItem('firstName', data.user.first_name || '');
       localStorage.setItem('lastName', data.user.last_name || '');
 
-      if (isLogin) {
-        navigate(redirectUrl, { replace: true });
-      } else {
-        // After signup, redirect to courses or stay on login
-        navigate(redirectUrl, { replace: true });
-      }
+      navigate(redirectUrl, { replace: true });
     } catch (error) {
       setError(error.message);
     } finally {
@@ -130,100 +125,53 @@ function SignUpForm() {
     }
   };
 
-  const accessProtectedRoute = async () => {
-    setError(null);
-    setLoading(true);
-
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Please sign in to access this resource');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Example protected route; replace with actual endpoint if needed
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/courses`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        if (data.error.includes('expired')) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('email');
-          localStorage.removeItem('firstName');
-          localStorage.removeItem('lastName');
-          setError('Your session has expired. Please sign in again.');
-        } else {
-          setError(data.error || 'Failed to access protected route');
-        }
-      } else {
-        console.log('Protected data:', data);
-        setError('Successfully accessed protected route!');
-      }
-    } catch (error) {
-      setError('Network error: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-100 to-gray-200"
-      role="main"
-      aria-label="Sign-up or Sign-in page"
-    >
-      <div className="flex w-full max-w-6xl items-center justify-center">
-        <div className="hidden lg:flex lg:w-1/2 px-8">
-          <div className="max-w-lg">
-            <h1 className="text-5xl font-bold mb-6 leading-tight">
-              Welcome to <br />
-              <span className="text-blue-600" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Thugil Creation
-              </span>
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              Discover the art of silk sarees and master the tools of the trade with our exclusive learning platform.
+    <div className="min-h-screen bg-white">
+
+      {/* Main Content */}
+      <div className="flex min-h-[calc(100vh-64px)]">
+        {/* Left Side - Image/Illustration */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gray-50 items-center justify-center p-12">
+          <div className="max-w-md text-center">
+            <div className="w-64 h-64 mx-auto mb-8 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+              <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Learn silk saree craftsmanship
+            </h2>
+            <p className="text-gray-600">
+              Master the traditional art of silk saree making with our comprehensive courses and expert guidance.
             </p>
           </div>
         </div>
-        <div className="w-full lg:w-1/2 max-w-md">
-          <div className="bg-white/90 backdrop-blur-sm p-8 border border-white/20 rounded-2xl shadow-lg">
+
+        {/* Right Side - Form */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+          <div className="w-full max-w-md">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-800 mb-3">
-                {isLogin ? 'Welcome Back' : 'Join Our Community'}
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                {isLogin ? 'Log in to your account' : 'Sign up and start learning'}
               </h2>
-              <p className="text-gray-500 text-sm">
-                {isLogin
-                  ? 'Sign in to continue your learning journey'
-                  : 'Create an account to access exclusive content'}
-              </p>
             </div>
+
             {error && (
               <div
-                className="bg-red-100 text-red-700 p-3 rounded-xl mb-4 text-sm"
+                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm"
                 role="alert"
                 aria-live="assertive"
               >
                 {error}
               </div>
             )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="firstName" className="sr-only">
-                      First Name
-                    </label>
                     <input
                       type="text"
                       name="firstName"
@@ -231,15 +179,12 @@ function SignUpForm() {
                       placeholder="First name"
                       value={formData.firstName}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 placeholder-gray-400"
+                      className="w-full px-3 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-gray-900 text-gray-900 placeholder-gray-500"
                       required={!isLogin}
                       aria-required={!isLogin}
                     />
                   </div>
                   <div>
-                    <label htmlFor="lastName" className="sr-only">
-                      Last Name
-                    </label>
                     <input
                       type="text"
                       name="lastName"
@@ -247,17 +192,15 @@ function SignUpForm() {
                       placeholder="Last name"
                       value={formData.lastName}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 placeholder-gray-400"
+                      className="w-full px-3 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-gray-900 text-gray-900 placeholder-gray-500"
                       required={!isLogin}
                       aria-required={!isLogin}
                     />
                   </div>
                 </div>
               )}
+              
               <div>
-                <label htmlFor="email" className="sr-only">
-                  Email
-                </label>
                 <input
                   type="email"
                   name="email"
@@ -265,15 +208,13 @@ function SignUpForm() {
                   placeholder="Email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 placeholder-gray-400"
+                  className="w-full px-3 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-gray-900 text-gray-900 placeholder-gray-500"
                   required
                   aria-required="true"
                 />
               </div>
+              
               <div>
-                <label htmlFor="password" className="sr-only">
-                  Password
-                </label>
                 <input
                   type="password"
                   name="password"
@@ -281,59 +222,64 @@ function SignUpForm() {
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 placeholder-gray-400"
+                  className="w-full px-3 py-3 border border-gray-400 rounded-sm focus:outline-none focus:border-gray-900 text-gray-900 placeholder-gray-500"
                   required
                   aria-required="true"
                 />
               </div>
+
               {!isLogin && (
-                <div className="flex items-center justify-center">
-                  <label className="flex items-center text-sm text-gray-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="newsletter"
-                      checked={formData.newsletter}
-                      onChange={handleChange}
-                      className="mr-2 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      aria-label="Subscribe to newsletter"
-                    />
-                    Subscribe to our newsletter
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    name="newsletter"
+                    id="newsletter"
+                    checked={formData.newsletter}
+                    onChange={handleChange}
+                    className="mt-1 mr-3 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    aria-label="Subscribe to newsletter"
+                  />
+                  <label htmlFor="newsletter" className="text-sm text-gray-600 cursor-pointer">
+                    Send me special offers, personalized recommendations, and learning tips.
                   </label>
                 </div>
               )}
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-blue-600 transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50"
+                className="w-full py-3 bg-purple-600 text-white font-bold rounded-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-busy={loading}
               >
-                {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Sign Up'}
+                {loading ? 'Please wait...' : isLogin ? 'Log in' : 'Sign up'}
               </button>
-              <div className="text-center">
-                <p className="text-gray-500 text-sm">
-                  {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsLogin(!isLogin);
-                      setError(null);
-                    }}
-                    className="text-purple-600 font-medium hover:text-purple-700 transition-colors duration-200"
-                    aria-label={isLogin ? 'Switch to sign-up' : 'Switch to sign-in'}
-                  >
-                    {isLogin ? 'Sign up' : 'Sign in'}
-                  </button>
+
+              {!isLogin && (
+                <p className="text-xs text-gray-500 text-center leading-relaxed">
+                  By signing up, you agree to our{' '}
+                  <a href="#" className="text-purple-600 underline">Terms of Use</a>{' '}
+                  and{' '}
+                  <a href="#" className="text-purple-600 underline">Privacy Policy</a>.
                 </p>
-              </div>
+              )}
             </form>
-            <button
-              onClick={accessProtectedRoute}
-              disabled={loading}
-              className="mt-4 w-full py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-all duration-200 disabled:opacity-50"
-              aria-busy={loading}
-            >
-              Test Protected Route
-            </button>
+
+            <div className="text-center mt-6 pt-6 border-t border-gray-200">
+              <p className="text-sm text-gray-600">
+                {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError(null);
+                  }}
+                  className="text-purple-600 font-bold underline hover:text-purple-700 transition-colors"
+                  aria-label={isLogin ? 'Switch to sign-up' : 'Switch to sign-in'}
+                >
+                  {isLogin ? 'Sign up' : 'Log in'}
+                </button>
+              </p>
+            </div>
           </div>
         </div>
       </div>
