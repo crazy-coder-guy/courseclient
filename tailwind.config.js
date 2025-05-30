@@ -1,11 +1,12 @@
-// tailwind.config.js
-export default {
+module.exports = {
   content: [
-    './index.html',
-    './src/**/*.{js,ts,jsx,tsx}', // make sure all src components are included
+    './src/**/*.{js,jsx,ts,tsx}',
+    './src/components/**/*.{js,jsx,ts,tsx}',
   ],
   theme: {
     extend: {},
   },
-  plugins: [],
-}
+  plugins: [
+     require('@tailwindcss/line-clamp'),
+  ],
+};

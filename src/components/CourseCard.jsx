@@ -1,14 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Star, Clock, PlayCircle, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './styles.css';
+
 export default function CourseCard({ course, isLoading = false }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef(null);
   const navigate = useNavigate();
 
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => setIsHovered(false);
+
+  // Intersection Observer to trigger fade-up effect
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target); // Stop observing once visible
+        }
+      },
+      { threshold: 0.1 } // Trigger when 10% of the card is visible
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => {
+      if (cardRef.current) {
+        observer.unobserve(cardRef.current);
+      }
+    };
+  }, []);
 
   // Calculate final price based on API logic
   const calculateFinalPrice = () => {
@@ -57,7 +83,10 @@ export default function CourseCard({ course, isLoading = false }) {
 
   return (
     <div
-      className="group bg-white border border-gray-200 rounded overflow-hidden hover:shadow-md transition-all cursor-pointer"
+      ref={cardRef}
+      className={`group bg-white border border-gray-200 rounded overflow-hidden hover:shadow-md transition-all cursor-pointer ${
+        isVisible ? 'animate-fade-up' : 'opacity-0'
+      }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={() => navigate(`/course/${course.id}`)}
