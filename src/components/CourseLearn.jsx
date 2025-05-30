@@ -14,16 +14,14 @@ export default function CourseLearn() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasPurchased, setHasPurchased] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar closed by default for mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Base API URL with fallback
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  // Fetch course and video data
   useEffect(() => {
     async function fetchCourseData() {
       const token = localStorage.getItem('token');
-      let purchaseStatus = false;
-
       if (!token) {
         toast.error('Please sign in to access the course.');
         navigate(`/signup?redirect=/courses/${courseId}/learn`);
@@ -34,29 +32,17 @@ export default function CourseLearn() {
         const [authResponse, purchaseResponse, courseRes, videosRes] = await Promise.all([
           fetch(`${API_URL}/api/auth/check`, {
             method: 'GET',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           }),
           fetch(`${API_URL}/api/courses/${courseId}/purchase-status`, {
             method: 'GET',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           }),
           fetch(`${API_URL}/api/courses/${courseId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           }),
           fetch(`${API_URL}/api/courses/${courseId}/videos`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           }),
         ]);
 
@@ -75,7 +61,7 @@ export default function CourseLearn() {
         }
 
         const purchaseData = await purchaseResponse.json();
-        purchaseStatus = purchaseData.hasPurchased;
+        const purchaseStatus = purchaseData.hasPurchased;
 
         if (!purchaseStatus) {
           toast.error('You need to purchase this course to access it.');
@@ -95,17 +81,15 @@ export default function CourseLearn() {
         const courseData = await courseRes.json();
         const videoData = await videosRes.json();
 
+        console.log('API Video Data:', videoData); // Debug: Log video data
+
         setCourse(courseData);
         setVideos(videoData || []);
         setHasPurchased(purchaseStatus);
 
         if (videoData?.length > 0) {
           setSelectedVideo(videoData[0]);
-          if (videoData[0].video_resolutions?.length > 0) {
-            setSelectedResolution(videoData[0].video_resolutions[0]);
-          } else if (videoData[0].video_url) {
-            setSelectedResolution(videoData[0].video_url);
-          }
+          setSelectedResolution(videoData[0].video_resolutions?.[0] || videoData[0].video_url || '');
         }
       } catch (err) {
         console.error('Fetch error:', err);
@@ -118,51 +102,39 @@ export default function CourseLearn() {
     fetchCourseData();
   }, [courseId, navigate]);
 
-  // Format duration for display
+  // Format video duration
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:00`;
+    return hours > 0 ? `${hours}:${mins.toString().padStart(2, '0')}` : `${mins}:00`;
   };
 
-  // Get resolution label for display
-  const getResolutionLabel = (url) => {
-    if (!url) return 'Auto';
-    if (url.includes('_240p')) return '240p';
-    if (url.includes('_360p')) return '360p';
-    if (url.includes('_480p')) return '480p';
-    if (url.includes('_720p')) return '720p';
-    if (url.includes('_1080p')) return '1080p';
-    return 'Default';
-  };
-
-  // Memoized Plyr sources configuration
+  // Configure Plyr sources and quality
   const getPlyrSources = useCallback(
     (video) => {
-      const token = localStorage.getItem('token');
-      const sourceUrl = selectedResolution || video?.video_url;
-      const qualityOptions = [];
-
-      if (video?.video_resolutions?.length > 0) {
-        video.video_resolutions.forEach((resolution) => {
-          qualityOptions.push({
-            name: getResolutionLabel(resolution),
-            src: resolution,
-            type: 'video/mp4',
-            selected: resolution === selectedResolution,
-          });
-        });
-      } else if (video?.video_url) {
-        qualityOptions.push({
-          name: 'Default',
-          src: video.video_url,
-          type: 'video/mp4',
-          selected: true,
-        });
+      if (!video) {
+        console.warn('No video selected'); // Debug: No video
+        return { type: 'video', sources: [] };
       }
+
+      const qualityLabels = ['4K', '2K', '1080p'];
+      const resolutions = Array.isArray(video.video_resolutions) ? video.video_resolutions : [];
+      console.log('Video Resolutions:', resolutions); // Debug: Log resolutions
+
+      const sources = [];
+      resolutions.slice(0, 3).forEach((url, index) => {
+        if (url) {
+          sources.push({ src: url, type: 'video/mp4', size: qualityLabels[index] });
+        }
+      });
+
+      // Fallback to video_url
+      if (sources.length === 0 && video.video_url) {
+        sources.push({ src: video.video_url, type: 'video/mp4', size: 'Auto' });
+      }
+
+      const sourceUrl = selectedResolution || sources[0]?.src || '';
+      console.log('Selected Source URL:', sourceUrl); // Debug: Log source URL
 
       return {
         type: 'video',
@@ -173,21 +145,20 @@ export default function CourseLearn() {
                 kind: 'captions',
                 label: course.subtitle_language || 'Subtitles',
                 srcLang: course.subtitle_language?.toLowerCase() || 'en',
-                src: `${API_URL}/api/courses/${courseId}/subtitles?token=${token}`,
-                default: true,
+                src: `${API_URL}/api/courses/${courseId}/subtitles?token=${localStorage.getItem('token')}`,
+                default: false,
               },
             ]
           : [],
         quality: {
-          default: selectedResolution
-            ? qualityOptions.findIndex((opt) => opt.src === selectedResolution)
-            : 0,
-          options: qualityOptions,
+          default: sources[0]?.size || '4K',
+          options: sources.map((s) => s.size) || ['4K', '2K', '1080p'],
           forced: true,
-          onChange: (quality) => {
-            const selectedQuality = qualityOptions[quality];
-            if (selectedQuality) {
-              setSelectedResolution(selectedQuality.src);
+          onChange: (newQuality) => {
+            const selected = sources.find((s) => s.size === newQuality);
+            if (selected) {
+              setSelectedResolution(selected.src);
+              console.log('Quality Changed to:', selected.src); // Debug: Log quality change
             }
           },
         },
@@ -196,7 +167,7 @@ export default function CourseLearn() {
     [course, courseId, selectedResolution]
   );
 
-  // Memoized Plyr options configuration
+  // Plyr player options
   const getPlyrOptions = useMemo(
     () => ({
       controls: [
@@ -212,11 +183,8 @@ export default function CourseLearn() {
         'pip',
         'fullscreen',
       ],
-      settings: ['speed', 'quality', 'captions'],
-      captions: {
-        active: course?.subtitle_available && course?.subtitle_language,
-        update: true,
-      },
+      settings: ['quality', 'speed', 'captions'],
+      captions: { active: course?.subtitle_available && course?.subtitle_language, update: true },
       autoplay: false,
       muted: false,
       clickToPlay: true,
@@ -232,40 +200,45 @@ export default function CourseLearn() {
   );
 
   // Handle video selection
-  const handleVideoSelect = useCallback((video) => {
-    setSelectedVideo(video);
-    if (video?.video_resolutions?.length > 0) {
-      setSelectedResolution(video.video_resolutions[0]);
-    } else if (video?.video_url) {
-      setSelectedResolution(video.video_url);
-    }
-    // Close sidebar on mobile after selecting a video
-    if (window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  }, []);
+  const handleVideoSelect = useCallback(
+    (video) => {
+      console.log('Selecting Video:', video.id); // Debug: Log video ID
+      if (video?.id !== selectedVideo?.id) {
+        setSelectedVideo(null);
+        setSelectedResolution(null);
+        setTimeout(() => {
+          try {
+            setSelectedVideo(video);
+            const newResolution = video.video_resolutions?.[0] || video.video_url || '';
+            setSelectedResolution(newResolution);
+            console.log('New Video Resolution:', newResolution); // Debug: Log resolution
+            if (window.innerWidth < 1024) {
+              setIsSidebarOpen(false);
+            }
+          } catch (err) {
+            console.error('Video switch error:', err);
+            toast.error('Failed to load video');
+            setError('Failed to load video');
+          }
+        }, 200);
+      } else if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      }
+    },
+    [selectedVideo]
+  );
 
-  // Toggle sidebar with mobile scroll-to-top functionality
+  // Toggle sidebar
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen((prev) => {
       const newState = !prev;
-      
-      // Auto scroll to top on mobile when opening sidebar
       if (newState && window.innerWidth < 1024) {
-        // Small delay to ensure the sidebar animation starts
-        setTimeout(() => {
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-          });
-        }, 100);
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
       }
-      
       return newState;
     });
   }, []);
 
-  // Error state rendering
   if (error) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -281,7 +254,6 @@ export default function CourseLearn() {
     );
   }
 
-  // Loading state rendering
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -294,7 +266,6 @@ export default function CourseLearn() {
     );
   }
 
-  // Access denied rendering
   if (!course || !hasPurchased) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -316,78 +287,29 @@ export default function CourseLearn() {
     );
   }
 
-  // Main rendering
   return (
     <div className="min-h-screen bg-white font-sans">
       <Toaster position="top-center" />
       <style>
         {`
-          .plyr {
-            border-radius: 0 !important;
-          }
-          .plyr--video {
-            background: #000;
-          }
-          .plyr__video-wrapper {
-            background: #000;
-          }
-          .plyr__controls {
-            background: rgba(0, 0, 0, 0.8) !important;
-          }
-          .plyr__control--overlaid {
-            background: rgba(120, 53, 15, 0.9) !important;
-          }
-          .plyr--full-ui input[type="range"] {
-            color: #78350f !important;
-          }
-          .plyr__control.plyr__tab-focus, 
-          .plyr__control:hover, 
-          .plyr__control[aria-expanded="true"] {
-            background: #78350f !important;
-          }
-          
-          /* Custom scrollbar for sidebar */
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-          }
-          
-          /* Responsive video container */
-          .video-container {
-            position: relative;
-            width: 100%;
-            height: 0;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
-          }
-          .video-container .plyr {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-          }
-          
-          /* Mobile video adjustments */
-          @media (max-width: 640px) {
-            .video-container {
-              padding-bottom: 60%; /* Slightly taller on mobile */
-            }
-          }
+          .plyr { border-radius: 0 !important; }
+          .plyr--video { background: #000; }
+          .plyr__video-wrapper { background: #000; }
+          .plyr__controls { background: rgba(0, 0, 0, 0.8) !important; }
+          .plyr__control--overlaid { background: rgba(120, 53, 15, 0.9) !important; }
+          .plyr--full-ui input[type="range"] { color: #78350f !important; }
+          .plyr__control.plyr__tab-focus, .plyr__control:hover, .plyr__control[aria-expanded="true"] { background: #78350f !important; }
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+          .video-container { position: relative; width: 100%; height: 0; padding-bottom: 56.25%; }
+          .video-container .plyr { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+          @media (max-width: 640px) { .video-container { padding-bottom: 60%; } }
         `}
       </style>
 
-      {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header - Hidden in mobile view when sidebar is open */}
         {(!isSidebarOpen || window.innerWidth >= 1024) && (
           <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
             <div className="py-3">
@@ -411,9 +333,7 @@ export default function CourseLearn() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                   </button>
-                  <h1 className="text-base sm:text-lg font-medium text-gray-900 truncate">
-                    {course?.course_name}
-                  </h1>
+                  <h1 className="text-base sm:text-lg font-medium text-gray-900 truncate">{course?.course_name}</h1>
                 </div>
                 <div className="hidden sm:flex items-center space-x-2 text-xs sm:text-sm text-gray-600 flex-shrink-0">
                   <span>{videos.length} videos</span>
@@ -421,7 +341,6 @@ export default function CourseLearn() {
                   <span>{Math.round(videos.reduce((acc, v) => acc + (v.video_duration_minutes || 0), 0) / 60)}h total</span>
                 </div>
               </div>
-              {/* Mobile stats */}
               <div className="sm:hidden mt-2 flex items-center space-x-2 text-xs text-gray-600">
                 <span>{videos.length} videos</span>
                 <span>•</span>
@@ -431,20 +350,17 @@ export default function CourseLearn() {
           </header>
         )}
 
-        {/* Main Content */}
         <div className="flex h-[calc(100vh-80px)] sm:h-[calc(100vh-88px)]">
-          {/* Main Video Section */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               <div className="space-y-5 sm:space-y-6">
-                {/* Video Player */}
                 <div className="w-full">
                   {selectedVideo ? (
                     <div className="video-container bg-black">
                       <Plyr
                         source={getPlyrSources(selectedVideo)}
                         options={getPlyrOptions}
-                        key={`${selectedVideo.id}-${selectedResolution}`}
+                        key={`${selectedVideo.id}-${selectedResolution || 'default'}`}
                       />
                     </div>
                   ) : (
@@ -460,7 +376,6 @@ export default function CourseLearn() {
                   )}
                 </div>
 
-                {/* Video Title and Info */}
                 {selectedVideo && (
                   <div className="space-y-3 sm:space-y-4">
                     <div>
@@ -475,25 +390,11 @@ export default function CourseLearn() {
                           <span className="hidden sm:inline">•</span>
                           <span className="truncate">{course?.course_name}</span>
                         </div>
-                        {selectedVideo.video_resolutions && selectedVideo.video_resolutions.length > 0 && (
-                          <select
-                            value={selectedResolution}
-                            onChange={(e) => setSelectedResolution(e.target.value)}
-                            className="bg-white border border-gray-300 rounded text-gray-900 text-xs sm:text-sm px-2 sm:px-3 py-1 focus:outline-none focus:ring-2 focus:ring-purple-900 focus:border-purple-900"
-                          >
-                            {selectedVideo.video_resolutions.map((resolution) => (
-                              <option key={resolution} value={resolution}>
-                                {getResolutionLabel(resolution)}
-                              </option>
-                            ))}
-                          </select>
-                        )}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Course Description Section */}
                 <div className="bg-gray-50 rounded-lg p-5 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">About this course</h3>
                   <div className="space-y-3">
@@ -523,22 +424,18 @@ export default function CourseLearn() {
                   </div>
                 </div>
 
-                {/* Additional Video Info */}
                 {selectedVideo && selectedVideo.video_description && (
                   <div className="bg-white border border-gray-200 rounded-lg p-5 sm:p-6">
                     <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2 sm:mb-3">Video Description</h4>
-                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-                      {selectedVideo.video_description}
-                    </p>
+                    <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{selectedVideo.video_description}</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Video List Sidebar */}
           <div
-            className={`fixed lg:static top-0 sm:top-0 right-0 h-full sm:h-full lg:h-auto w-full sm:w-80 lg:w-96 bg-white border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:px-0 ${
+            className={`fixed lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:px-0 ${
               isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
             } lg:translate-x-0 flex flex-col`}
           >
@@ -561,7 +458,7 @@ export default function CourseLearn() {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {videos.length > 0 ? (
                 videos.map((video, index) => {
@@ -575,12 +472,18 @@ export default function CourseLearn() {
                       onClick={() => handleVideoSelect(video)}
                     >
                       <div className="flex-shrink-0 mr-3 mt-1">
-                        <div className={`w-6 h-6 flex items-center justify-center text-xs font-medium rounded ${
-                          isSelected ? 'text-purple-900 bg-purple-100' : 'text-gray-500 bg-gray-100'
-                        }`}>
+                        <div
+                          className={`w-6 h-6 flex items-center justify-center text-xs font-medium rounded ${
+                            isSelected ? 'text-purple-900 bg-purple-100' : 'text-gray-500 bg-gray-100'
+                          }`}
+                        >
                           {isSelected ? (
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                           ) : (
                             <span>{index + 1}</span>
@@ -588,15 +491,15 @@ export default function CourseLearn() {
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className={`text-xs sm:text-sm font-medium line-clamp-2 leading-tight ${
-                          isSelected ? 'text-purple-900' : 'text-gray-900'
-                        }`}>
+                        <h4
+                          className={`text-xs sm:text-sm font-medium line-clamp-2 leading-tight ${
+                            isSelected ? 'text-purple-900' : 'text-gray-900'
+                          }`}
+                        >
                           {video.video_detail || video.title || `Lecture ${index + 1}`}
                         </h4>
                         <div className="flex items-center mt-1 text-xs text-gray-500">
-                          {video.video_duration_minutes && (
-                            <span>{formatDuration(video.video_duration_minutes)}</span>
-                          )}
+                          {video.video_duration_minutes && <span>{formatDuration(video.video_duration_minutes)}</span>}
                         </div>
                       </div>
                     </div>
@@ -605,7 +508,12 @@ export default function CourseLearn() {
               ) : (
                 <div className="p-6 sm:p-8 text-center text-gray-500">
                   <svg className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2M7 4h10M7 4v16a2 2 0 002 2h6a2 2 0 002-2V4M7 8h10M7 12h10M7 16h10" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2M7 4h10M7 4v16a2 2 0 002 2h6a2 2 0 002-2V4M7 8h10M7 12h10M7 16h10"
+                    />
                   </svg>
                   <p className="text-xs sm:text-sm">No videos available</p>
                 </div>
@@ -615,12 +523,8 @@ export default function CourseLearn() {
         </div>
       </div>
 
-      {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={toggleSidebar}
-        ></div>
+        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={toggleSidebar}></div>
       )}
     </div>
   );
