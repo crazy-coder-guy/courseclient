@@ -6,7 +6,6 @@ function smoothScrollTo(top, duration = 500) {
   const change = top - start;
   const startTime = performance.now();
 
-  // easing function: easeInOutQuad
   function easeInOutQuad(t) {
     return t < 0.5
       ? 2 * t * t
@@ -32,7 +31,11 @@ export default function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    smoothScrollTo(0, 800); // scroll to top with 800ms duration (adjust speed here)
+    // Instantly scroll to top to prevent visual jump
+    window.scrollTo(0, 0);
+
+    // Then optionally smooth scroll to top again (remove if not needed)
+    // smoothScrollTo(0, 800);
   }, [pathname]);
 
   return null;

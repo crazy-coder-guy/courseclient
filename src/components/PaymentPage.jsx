@@ -8,7 +8,7 @@ function PaymentPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [course, setCourse]=useState(null);
+  const [course, setCourse] = useState(null);
   const [billingAddress, setBillingAddress] = useState('');
   const [isCancelled, setIsCancelled] = useState(false);
   const billingAddressRef = useRef(null);
@@ -119,6 +119,13 @@ function PaymentPage() {
       return;
     }
 
+    if (billingAddress.length < 15) {
+      setError('Billing address must be at least 15 characters long');
+      billingAddressRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setLoading(false);
+      return;
+    }
+
     const finalPrice = calculateFinalPrice();
     if (!finalPrice || finalPrice <= 0) {
       setError('Invalid course price');
@@ -175,7 +182,10 @@ function PaymentPage() {
             }
 
             alert('Payment successful! You have enrolled in the course.');
-            navigate(`/purchasedcourse/${courseId}`);
+            // Replace the current history entry with CourseDetails page
+            navigate(`/course/${courseId}`, { replace: true });
+            // Then navigate to CourseLearn page
+            navigate(`/courses/${courseId}/learn`);
           } catch (err) {
             setError(`Payment verification failed: ${err.message}`);
           } finally {
@@ -305,7 +315,6 @@ function PaymentPage() {
                   <div className="relative">
                     <label className="block text-base font-semibold text-dark-purple-900 mb-1">
                       First Name *
-                   
                     </label>
                     <input
                       type="text"
@@ -317,7 +326,6 @@ function PaymentPage() {
                   <div className="relative">
                     <label className="block text-base font-semibold text-dark-purple-900 mb-1">
                       Last Name *
-                 
                     </label>
                     <input
                       type="text"
@@ -329,7 +337,6 @@ function PaymentPage() {
                   <div className="md:col-span-2 relative">
                     <label className="block text-base font-semibold text-dark-purple-900 mb-1">
                       Email Address *
-                     
                     </label>
                     <input
                       type="email"
@@ -340,18 +347,17 @@ function PaymentPage() {
                   </div>
                   <div className="md:col-span-2 relative">
                     <label className="block text-base font-semibold text-dark-purple-900 mb-1">
-                      Billing Address *
-                     
+                      Billing Address * (Minimum 15 characters)
                     </label>
                     <textarea
                       ref={billingAddressRef}
                       value={billingAddress}
                       onChange={(e) => setBillingAddress(e.target.value)}
-                      placeholder="Enter your complete billing address"
+                      placeholder="Enter your complete billing address (minimum 15 characters)"
                       rows={3}
-                      className={`w-full border ${error && !billingAddress ? 'border-red-500' : 'border-gray-300'} px-3 py-2 text-base text-gray-900 bg-white focus:outline-none focus:border-dark-purple-900 focus:ring-1 focus:ring-dark-purple-900 transition-all resize-none font-medium`}
+                      className={`w-full border ${error && (billingAddress.length < 15 || !billingAddress) ? 'border-red-500' : 'border-gray-300'} px-3 py-2 text-base text-gray-900 bg-white focus:outline-none focus:border-dark-purple-900 focus:ring-1 focus:ring-dark-purple-900 transition-all resize-none font-medium`}
                     />
-                    {error && !billingAddress && (
+                    {error && (billingAddress.length < 15 || !billingAddress) && (
                       <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-red-500"></div>
                     )}
                   </div>
@@ -378,7 +384,6 @@ function PaymentPage() {
                     whileHover={{ scale: 1.05 }}
                     className="p-3 bg-gray-50 border border-gray-200"
                   >
-                    <div className="text-3xl mb-2">{item.icon}</div>
                     <h3 className="text-base font-bold text-dark-purple-900">{item.title}</h3>
                     <p className="text-sm text-gray-600 font-medium">{item.desc}</p>
                   </motion.div>
@@ -457,49 +462,44 @@ function PaymentPage() {
                   </div>
                 </div>
                 <div>
-  <h3 className="text-lg font-bold text-gray-900 mb-4">This course includes:</h3>
-  <div className="flex flex-wrap gap-3">
-    
-    {course.downloadable_resources && (
-      <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
-        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        </svg>
-        <span className="text-sm font-medium">
-          {course.downloadable_resources} downloadable resources
-        </span>
-      </div>
-    )}
-
-    <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
-      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-      </svg>
-      <span className="text-sm font-medium">Access on mobile and TV</span>
-    </div>
-
-    {course.subtitle_available && (
-      <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
-        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2M7 4h10M7 4v16a1 1 0 001 1h8a1 1 0 001-1V4M9 9h6M9 13h6" />
-        </svg>
-        <span className="text-sm font-medium">
-          Closed captions ({course.subtitle_language || 'Available'})
-        </span>
-      </div>
-    )}
-
-    {course.certificate_available && (
-      <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
-        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-        </svg>
-        <span className="text-sm font-medium">Certificate of completion</span>
-      </div>
-    )}
-  </div>
-</div>
-
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">This course includes:</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {course.downloadable_resources && (
+                      <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {course.downloadable_resources} downloadable resources
+                        </span>
+                      </div>
+                    )}
+                    <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm font-medium">Access on mobile and TV</span>
+                    </div>
+                    {course.subtitle_available && (
+                      <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2M7 4h10M7 4v16a1 1 0 001 1h8a1 1 0 001-1V4M9 9h6M9 13h6" />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          Closed captions ({course.subtitle_language || 'Available'})
+                        </span>
+                      </div>
+                    )}
+                    {course.certificate_available && (
+                      <div className="inline-flex items-center gap-2 bg-purple-50 text-purple-800 px-4 py-2 rounded-full shadow-sm">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                        </svg>
+                        <span className="text-sm font-medium">Certificate of completion</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <motion.div
@@ -534,28 +534,24 @@ function PaymentPage() {
             </motion.div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row bg-white  rounded-lg overflow-hidden p-6 md:p-8 gap-6">
-  {/* Left: Certificate Image */}
-  <div className="w-full md:w-1/2">
-    <img
-      src="https://cdn.venngage.com/template/thumbnail/full/d793fea5-7d9c-4cdf-a438-69ea99c696b3.webp"
-      alt="Certificate Preview"
-      className="w-full h-auto object-cover rounded-md shadow-sm"
-    />
-  </div>
-
-  {/* Right: Certificate Description, vertically centered */}
-  <div className="w-full md:w-1/2 flex flex-col justify-center text-center md:text-left">
-    <h2 className="text-2xl font-bold text-gray-800 mb-4">
-      Industry-Recognized Certificate
-    </h2>
-    <p className="text-gray-600 text-base leading-relaxed">
-      Upon successful completion of this course, you’ll receive a verifiable certificate that demonstrates your skills and commitment to professional growth. Perfect for showcasing on LinkedIn or including in your resume.
-    </p>
-  </div>
-</div>
+        <div className="flex flex-col md:flex-row bg-white rounded-lg overflow-hidden p-6 md:p-8 gap-6">
+          <div className="w-full md:w-1/2">
+            <img
+              src="https://cdn.venngage.com/template/thumbnail/full/d793fea5-7d9c-4cdf-a438-69ea99c696b3.webp"
+              alt="Certificate Preview"
+              className="w-full h-auto object-cover rounded-md shadow-sm"
+            />
+          </div>
+          <div className="w-full md:w-1/2 flex flex-col justify-center text-center md:text-left">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Industry-Recognized Certificate
+            </h2>
+            <p className="text-gray-600 text-base leading-relaxed">
+              Upon successful completion of this course, you’ll receive a verifiable certificate that demonstrates your skills and commitment to professional growth. Perfect for showcasing on LinkedIn or including in your resume.
+            </p>
+          </div>
+        </div>
       </div>
-
 
       <style jsx>{`
         * {

@@ -24,6 +24,7 @@ export default function CourseLearn() {
   const [volume, setVolume] = useState(0.7);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isQualityMenuOpen, setIsQualityMenuOpen] = useState(false);
+  const progressSaveTimeoutRef = useRef(null); // For debouncing progress saves
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -59,6 +60,11 @@ export default function CourseLearn() {
           hls.currentLevel = -1;
         }
 
+        // Seek to saved progress time
+        if (selectedVideo.progress?.current_time > 0) {
+          video.currentTime = selectedVideo.progress.current_time;
+        }
+
         video.play().catch(e => console.error('Auto-play failed:', e));
       });
 
@@ -73,10 +79,46 @@ export default function CourseLearn() {
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = videoUrl;
       video.addEventListener('loadedmetadata', () => {
+        // Seek to saved progress time
+        if (selectedVideo.progress?.current_time > 0) {
+          video.currentTime = selectedVideo.progress.current_time;
+        }
         video.play().catch(e => console.error('Auto-play failed:', e));
       });
     }
   }, [selectedVideo]);
+
+  // Save progress to backend
+  const saveProgress = useCallback(
+    async (currentTime, isCompleted) => {
+      const token = localStorage.getItem('token');
+      if (!token || !selectedVideo) return;
+
+      try {
+        const response = await fetch(`${API_URL}/api/courses/${courseId}/videos/${selectedVideo.id}/progress`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            current_time: currentTime,
+            is_completed: isCompleted,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Failed to save progress:', errorData.error);
+          // toast.error(`Failed to save progress: ${errorData.error}`);
+        }
+      } catch (err) {
+        console.error('Save progress error:', err);
+        // toast.error('Error saving progress');
+      }
+    },
+    [courseId, selectedVideo]
+  );
 
   // Handle video events
   useEffect(() => {
@@ -85,16 +127,31 @@ export default function CourseLearn() {
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      // Debounce progress saving
+      if (progressSaveTimeoutRef.current) {
+        clearTimeout(progressSaveTimeoutRef.current);
+      }
+      const isCompleted = video.currentTime >= video.duration * 0.95; // Mark as completed at 95%
+      progressSaveTimeoutRef.current = setTimeout(() => {
+        saveProgress(video.currentTime, isCompleted);
+      }, 1000); // Save every 1 second
+    };
     const handleDurationChange = () => setDuration(video.duration);
     const handleVolumeChange = () => setVolume(video.volume);
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      saveProgress(video.currentTime, true); // Save as completed when video ends
+    };
 
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('durationchange', handleDurationChange);
     video.addEventListener('volumechange', handleVolumeChange);
+    video.addEventListener('ended', handleEnded);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
@@ -103,9 +160,13 @@ export default function CourseLearn() {
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('durationchange', handleDurationChange);
       video.removeEventListener('volumechange', handleVolumeChange);
+      video.removeEventListener('ended', handleEnded);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      if (progressSaveTimeoutRef.current) {
+        clearTimeout(progressSaveTimeoutRef.current);
+      }
     };
-  }, [selectedVideo]);
+  }, [selectedVideo, saveProgress]);
 
   // Handle quality change
   const handleQualityChange = useCallback((level) => {
@@ -136,8 +197,9 @@ export default function CourseLearn() {
   const handleSeek = useCallback((time) => {
     if (videoRef.current) {
       videoRef.current.currentTime = time;
+      saveProgress(time, videoRef.current.currentTime >= videoRef.current.duration * 0.95);
     }
-  }, []);
+  }, [saveProgress]);
 
   // Handle volume change
   const handleVolumeChange = useCallback((newVolume) => {
@@ -462,6 +524,9 @@ export default function CourseLearn() {
           .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #555;
           }
+          .completed-icon {
+            color: #10b981;
+          }
         `}
       </style>
 
@@ -507,6 +572,7 @@ export default function CourseLearn() {
                         controls={false}
                         autoPlay={false}
                         preload="auto"
+                        class_send_progress_on_time_update
                         className="w-full h-auto"
                         key={selectedVideo.id}
                         onClick={togglePlayPause}
@@ -752,6 +818,7 @@ export default function CourseLearn() {
               {videos.length > 0 ? (
                 videos.map((video, index) => {
                   const isSelected = selectedVideo?.id === video.id;
+                  const isCompleted = video.progress?.is_completed;
                   return (
                     <div
                       key={video.id}
@@ -763,10 +830,22 @@ export default function CourseLearn() {
                       <div className="flex-shrink-0 mr-3 mt-1">
                         <div
                           className={`w-6 h-6 flex items-center justify-center text-xs font-medium rounded ${
-                            isSelected ? 'text-purple-900 bg-purple-100' : 'text-gray-500 bg-gray-100'
+                            isSelected
+                              ? 'text-purple-900 bg-purple-100'
+                              : isCompleted
+                              ? 'text-green-600 bg-green-100'
+                              : 'text-gray-500 bg-gray-100'
                           }`}
                         >
-                          {isSelected ? (
+                          {isCompleted ? (
+                            <svg className="w-4 h-4 completed-icon" fill="currentColor" viewBox="0 0 20 20">
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          ) : isSelected ? (
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                               <path
                                 fillRule="evenodd"
@@ -782,13 +861,19 @@ export default function CourseLearn() {
                       <div className="flex-1 min-w-0">
                         <h4
                           className={`text-xs sm:text-sm font-medium line-clamp-2 leading-tight ${
-                            isSelected ? 'text-purple-900' : 'text-gray-900'
+                            isSelected ? 'text-purple-900' : isCompleted ? 'text-green-600' : 'text-gray-900'
                           }`}
                         >
                           {video.video_detail || video.title || `Lecture ${index + 1}`}
                         </h4>
                         <div className="flex items-center mt-1 text-xs text-gray-500">
                           {video.video_duration_minutes && <span>{formatDuration(video.video_duration_minutes)}</span>}
+                          {isCompleted && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span className="text-green-600">Completed</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

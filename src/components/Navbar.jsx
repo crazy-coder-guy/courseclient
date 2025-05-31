@@ -54,10 +54,7 @@ export default function ModernNavbar() {
 
             {/* Action Icons */}
             <div className="flex items-center space-x-3">
-              {/* Wishlist */}
-              <button className="p-2 text-gray-600 hover:text-purple-600 hover:bg-gray-100 rounded-full transition-colors">
-                <Heart size={20} />
-              </button>
+           
 
               {/* Notifications */}
               <button className="p-2 text-gray-600 hover:text-purple-600 hover:bg-gray-100 rounded-full transition-colors">
