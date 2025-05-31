@@ -5,8 +5,9 @@ import HomePage from './pages/HomePage';
 import CourseDetails from './components/CourseDetails';
 import PaymentPage from './components/PaymentPage';
 import CourseLearn from './components/CourseLearn';
+import PurchasedCourses from './components/PurchasedCourses'; // ✅ Import PurchasedCourses
 import Footer from './components/FooterInfo';
-import Navbar from './components/Navbar'; // ✅ Import Navbar
+import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
 import './components/styles.css';
 
@@ -18,9 +19,9 @@ function Layout({ children }) {
 
   return (
     <>
-      {!hideNavbar && <Navbar />} {/* ✅ Show Navbar on all pages except signup */}
+      {!hideNavbar && <Navbar />}
       {children}
-      {!hideFooter && <Footer />} {/* ✅ Show Footer on all pages except signup */}
+      {!hideFooter && <Footer />}
     </>
   );
 }
@@ -63,6 +64,14 @@ function App() {
             </Layout>
           }
         />
+        <Route
+          path="/my-learnings"
+          element={
+            <Layout>
+              <PurchasedCourses />
+            </Layout>
+          }
+        /> {/* ✅ New route for PurchasedCourses */}
       </Routes>
     </Router>
   );

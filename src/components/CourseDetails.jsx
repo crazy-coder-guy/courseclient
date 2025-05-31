@@ -387,7 +387,7 @@ const { daysRemaining, formattedDate } = useMemo(() => {
   };
 
   // Generate course URL for QR code
-  const courseUrl = `https://thugilcreation.com/courses/${courseId}`;
+  const courseUrl = `https://courseclient.onrender.com`;
 
   if (error) {
     return (

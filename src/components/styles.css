@@ -2,6 +2,7 @@
 
 body {
   font-family: 'Nunito Sans', sans-serif !important;
+  background-color: #FAF9F1 !important;
 }
 @keyframes fade-up {
   0% {

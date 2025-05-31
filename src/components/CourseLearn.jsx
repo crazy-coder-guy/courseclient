@@ -65,7 +65,7 @@ export default function CourseLearn() {
           video.currentTime = selectedVideo.progress.current_time;
         }
 
-        video.play().catch(e => console.error('Auto-play failed:', e));
+        video.play().catch((e) => console.error('Auto-play failed:', e));
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
@@ -83,7 +83,7 @@ export default function CourseLearn() {
         if (selectedVideo.progress?.current_time > 0) {
           video.currentTime = selectedVideo.progress.current_time;
         }
-        video.play().catch(e => console.error('Auto-play failed:', e));
+        video.play().catch((e) => console.error('Auto-play failed:', e));
       });
     }
   }, [selectedVideo]);
@@ -94,27 +94,59 @@ export default function CourseLearn() {
       const token = localStorage.getItem('token');
       if (!token || !selectedVideo) return;
 
+      // Skip saving progress if the video is already completed
+      if (selectedVideo.progress?.is_completed) {
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_URL}/api/courses/${courseId}/videos/${selectedVideo.id}/progress`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            current_time: currentTime,
-            is_completed: isCompleted,
-          }),
-        });
+        const response = await fetch(
+          `${API_URL}/api/courses/${courseId}/videos/${selectedVideo.id}/progress`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              current_time: currentTime,
+              is_completed: isCompleted,
+            }),
+          }
+        );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('Failed to save progress:', errorData.error);
-          // toast.error(`Failed to save progress: ${errorData.error}`);
+          console.error('Failed to save progress:', errorData.error || 'Unknown error');
+        } else {
+          // Update local video progress to reflect the saved state
+          setVideos((prevVideos) =>
+            prevVideos.map((video) =>
+              video.id === selectedVideo.id
+                ? {
+                    ...video,
+                    progress: {
+                      ...video.progress,
+                      current_time: currentTime,
+                      is_completed: isCompleted,
+                    },
+                  }
+                : video
+            )
+          );
+          if (isCompleted) {
+            setSelectedVideo((prev) => ({
+              ...prev,
+              progress: {
+                ...prev.progress,
+                current_time: currentTime,
+                is_completed: isCompleted,
+              },
+            }));
+          }
         }
       } catch (err) {
         console.error('Save progress error:', err);
-        // toast.error('Error saving progress');
       }
     },
     [courseId, selectedVideo]
@@ -144,6 +176,11 @@ export default function CourseLearn() {
     const handleEnded = () => {
       setIsPlaying(false);
       saveProgress(video.currentTime, true); // Save as completed when video ends
+      // Auto-play next video
+      const currentIndex = videos.findIndex((v) => v.id === selectedVideo.id);
+      if (currentIndex < videos.length - 1) {
+        setSelectedVideo(videos[currentIndex + 1]);
+      }
     };
 
     video.addEventListener('play', handlePlay);
@@ -166,16 +203,19 @@ export default function CourseLearn() {
         clearTimeout(progressSaveTimeoutRef.current);
       }
     };
-  }, [selectedVideo, saveProgress]);
+  }, [selectedVideo, saveProgress, videos]);
 
   // Handle quality change
-  const handleQualityChange = useCallback((level) => {
-    setSelectedQuality(level);
-    if (hlsRef.current) {
-      hlsRef.current.currentLevel = level;
-    }
-    setIsQualityMenuOpen(false);
-  }, []);
+  const handleQualityChange = useCallback(
+    (level) => {
+      setSelectedQuality(level);
+      if (hlsRef.current) {
+        hlsRef.current.currentLevel = level;
+      }
+      setIsQualityMenuOpen(false);
+    },
+    []
+  );
 
   // Toggle quality menu
   const toggleQualityMenu = useCallback(() => {
@@ -188,18 +228,21 @@ export default function CourseLearn() {
       if (isPlaying) {
         videoRef.current.pause();
       } else {
-        videoRef.current.play().catch(e => console.error('Play failed:', e));
+        videoRef.current.play().catch((e) => console.error('Play failed:', e));
       }
     }
   }, [isPlaying]);
 
   // Handle seek
-  const handleSeek = useCallback((time) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      saveProgress(time, videoRef.current.currentTime >= videoRef.current.duration * 0.95);
-    }
-  }, [saveProgress]);
+  const handleSeek = useCallback(
+    (time) => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = time;
+        saveProgress(time, videoRef.current.currentTime >= videoRef.current.duration * 0.95);
+      }
+    },
+    [saveProgress]
+  );
 
   // Handle volume change
   const handleVolumeChange = useCallback((newVolume) => {
@@ -221,7 +264,7 @@ export default function CourseLearn() {
     if (!videoRef.current) return;
 
     if (!document.fullscreenElement) {
-      videoRef.current.requestFullscreen().catch(err => {
+      videoRef.current.requestFullscreen().catch((err) => {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
       });
     } else {
@@ -305,7 +348,9 @@ export default function CourseLearn() {
         setHasPurchased(purchaseStatus);
 
         if (videoData?.length > 0) {
-          setSelectedVideo(videoData[0]);
+          // Select the first uncompleted video or the first video if all are completed
+          const uncompletedVideo = videoData.find((video) => !video.progress?.is_completed) || videoData[0];
+          setSelectedVideo(uncompletedVideo);
         }
       } catch (err) {
         console.error('Fetch error:', err);
@@ -335,10 +380,8 @@ export default function CourseLearn() {
         setQualityLevels([]);
         setSelectedQuality(-1);
         setIsQualityMenuOpen(false);
-        if (window.innerWidth < 1024) {
-          setIsSidebarOpen(false);
-        }
-      } else if (window.innerWidth < 1024) {
+      }
+      if (window.innerWidth < 1024) {
         setIsSidebarOpen(false);
       }
     },
@@ -360,8 +403,18 @@ export default function CourseLearn() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="bg-white p-6 sm:p-8 max-w-md w-full text-center shadow-lg rounded-lg">
-          <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Error loading Course</h3>
           <p className="text-sm sm:text-base text-gray-600">{error}</p>
@@ -387,14 +440,25 @@ export default function CourseLearn() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="bg-white p-6 sm:p-8 max-w-md w-full text-center shadow-lg rounded-lg">
-          <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
           <p className="text-sm sm:text-base text-gray-600">You need to purchase this course to access the content.</p>
           <button
             onClick={() => navigate(`/courses/${courseId}`)}
             className="mt-4 bg-purple-900 hover:bg-purple-800 text-white py-2 px-4 sm:px-6 text-sm sm:text-base font-medium transition-colors rounded"
+            aria-label="Go to course page"
           >
             Go to Course
           </button>
@@ -411,7 +475,7 @@ export default function CourseLearn() {
         {`
           .quality-menu {
             position: absolute;
-            bottom: 50px;
+            bottom: ${isFullscreen ? '70px' : '50px'};
             right: 10px;
             background: rgba(0,0,0,0.8);
             border-radius: 4px;
@@ -570,9 +634,8 @@ export default function CourseLearn() {
                       <video
                         ref={videoRef}
                         controls={false}
-                        autoPlay={false}
+                        autoPlay={true}
                         preload="auto"
-                        class_send_progress_on_time_update
                         className="w-full h-auto"
                         key={selectedVideo.id}
                         onClick={togglePlayPause}
@@ -595,7 +658,7 @@ export default function CourseLearn() {
 
                         <div className="controls-row">
                           <div className="left-controls">
-                            <button className="control-button" onClick={togglePlayPause}>
+                            <button className="control-button" onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'}>
                               {isPlaying ? (
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                   <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
@@ -608,7 +671,7 @@ export default function CourseLearn() {
                             </button>
 
                             <div className="volume-container">
-                              <button className="control-button" onClick={toggleMute}>
+                              <button className="control-button" onClick={toggleMute} aria-label={volume === 0 ? 'Unmute' : 'Mute'}>
                                 {volume === 0 ? (
                                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                     <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
@@ -627,6 +690,7 @@ export default function CourseLearn() {
                                 value={volume}
                                 onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
                                 className="volume-slider"
+                                aria-label="Volume control"
                               />
                             </div>
 
@@ -638,7 +702,11 @@ export default function CourseLearn() {
                           <div className="right-controls">
                             {qualityLevels.length > 0 && (
                               <div className="relative">
-                                <button className="control-button" onClick={toggleQualityMenu}>
+                                <button
+                                  className="control-button"
+                                  onClick={toggleQualityMenu}
+                                  aria-label="Select video quality"
+                                >
                                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                     <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm-7 7H3v4c0 1.1.9 2 2 2h4v-2H5v-4zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4z" />
                                   </svg>
@@ -650,6 +718,9 @@ export default function CourseLearn() {
                                         key={level.id}
                                         className={`quality-option ${selectedQuality === level.id ? 'selected' : ''}`}
                                         onClick={() => handleQualityChange(level.id)}
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-label={`Select ${level.name} quality`}
                                       >
                                         {level.name}
                                       </div>
@@ -659,7 +730,11 @@ export default function CourseLearn() {
                               </div>
                             )}
 
-                            <button className="control-button" onClick={toggleFullscreen}>
+                            <button
+                              className="control-button"
+                              onClick={toggleFullscreen}
+                              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                            >
                               {isFullscreen ? (
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                                   <path d="M7 16h3v3h2v-5H7v2zm3-8H7v2h5V7h-2v1zm6 11h2v-3h3v-2h-5v5zm2-11V7h-2v5h5v-2h-3z" />
@@ -678,9 +753,24 @@ export default function CourseLearn() {
                 ) : (
                   <div className="aspect-video bg-black flex items-center justify-center">
                     <div className="text-center">
-                      <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <p className="text-gray-400 text-sm sm:text-lg">Select a video to start learning</p>
                     </div>
@@ -699,7 +789,11 @@ export default function CourseLearn() {
                         {selectedVideo.video_duration_minutes && (
                           <span className="flex items-center gap-1">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                             {formatDuration(selectedVideo.video_duration_minutes)}
                           </span>
@@ -744,7 +838,11 @@ export default function CourseLearn() {
                           <div className="flex items-start gap-3 p-3 bg-white rounded-none border border-gray-100">
                             <div className="w-5 h-5 bg-green-100 rounded-none flex items-center justify-center mt-0.5">
                               <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 9a3 0 100-6 3 0 000 6zm-7 9a7 0 1114 0H3z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             </div>
                             <div>
@@ -758,7 +856,11 @@ export default function CourseLearn() {
                           <div className="flex items-start gap-3 p-3 bg-white rounded-none border border-gray-100">
                             <div className="w-5 h-5 bg-blue-100 rounded-none flex items-center justify-center mt-0.5">
                               <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                <path
+                                  fillRule="evenodd"
+                                  d="M17 7a1 1 0 01-1 1H8a1 1 0 01-1-1V3a1 1 0 011-1h5a3 3 0 013 3v2zm-12 0a1 1 0 100-2 1 1 0 000 2z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             </div>
                             <div>
@@ -772,7 +874,7 @@ export default function CourseLearn() {
                           <div className="flex items-start gap-3 p-3 bg-white rounded-none border border-gray-100">
                             <div className="w-5 h-5 bg-orange-100 rounded-none flex items-center justify-center mt-0.5">
                               <svg className="w-3 h-3 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 0 00.951.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 0 00-1.175 0l-2.8 2.034c-.784-.57-1.838-.197-1.539-1.118l1.07-3.292a1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 0 00.951-.69l1.07-3.292z" />
                               </svg>
                             </div>
                             <div>
@@ -790,7 +892,7 @@ export default function CourseLearn() {
           </div>
 
           <div
-            className={`fixed lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:px-0 ${
+            className={`fixed lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:p-0 ${
               isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
             } lg:translate-x-0 flex flex-col`}
           >
@@ -798,17 +900,19 @@ export default function CourseLearn() {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">{course?.course_name}</h3>
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                    {videos.length} lectures • {Math.round(videos.reduce((acc, v) => acc + (parseFloat(v.video_duration_minutes) || 0), 0) / 60)}h total
+                  <p className="text-sm sm:text-sm text-gray-600 mt-1">
+                    {videos.length} videos •{' '}
+                    {Math.round(videos.reduce((acc, v) => acc + (parseFloat(v.video_duration_minutes) || 0), 0) / 60)}h
+                    total
                   </p>
                 </div>
                 <button
                   onClick={toggleSidebar}
-                  className="p-1 hover:bg-gray-200 rounded transition-colors lg:hidden"
+                  className="p-1 hover:bg-gray-200 rounded-none transition-colors lg:hidden"
                   aria-label="Close sidebar"
                 >
                   <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
@@ -819,17 +923,21 @@ export default function CourseLearn() {
                 videos.map((video, index) => {
                   const isSelected = selectedVideo?.id === video.id;
                   const isCompleted = video.progress?.is_completed;
+
                   return (
                     <div
                       key={video.id}
                       className={`flex items-start p-3 sm:p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                        isSelected ? 'bg-purple-50 border-l-4 border-l-purple-900' : ''
+                        isSelected ? 'bg-purple-50 border-l-4 border-purple-900' : ''
                       }`}
                       onClick={() => handleVideoSelect(video)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Select video: ${video.video_detail || video.title || `Lecture ${index + 1}`}`}
                     >
                       <div className="flex-shrink-0 mr-3 mt-1">
                         <div
-                          className={`w-6 h-6 flex items-center justify-center text-xs font-medium rounded ${
+                          className={`w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full ${
                             isSelected
                               ? 'text-purple-900 bg-purple-100'
                               : isCompleted
@@ -838,20 +946,16 @@ export default function CourseLearn() {
                           }`}
                         >
                           {isCompleted ? (
-                            <svg className="w-4 h-4 completed-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                               <path
                                 fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8-4-4a1 1 0 011.414-1.414L9 12.586l7.293-7.293a1 1 0 010 1.414z"
                                 clipRule="evenodd"
                               />
                             </svg>
                           ) : isSelected ? (
                             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                                clipRule="evenodd"
-                              />
+                              <circle cx="10" cy="10" r="5" />
                             </svg>
                           ) : (
                             <span>{index + 1}</span>
@@ -881,35 +985,39 @@ export default function CourseLearn() {
                 })
               ) : (
                 <div className="p-6 sm:p-8 text-center text-gray-500">
-                  <svg className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2M7 4h10M7 4v16a2 2 0 002 2h6a2 2 0 002-2V4M7 8h10M7 12h10M7 16h10"
-                    />
+                  <svg
+                    className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
-                  <p className="text-xs sm:text-sm">No videos available</p>
+                  <p className="text-sm sm:text-sm">No videos available</p>
                 </div>
               )}
             </div>
+
+            <button
+              onClick={toggleSidebar}
+              className="mobile-toggle-button"
+              aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
+
+          {isSidebarOpen && (
+            <div
+              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={toggleSidebar}
+              aria-hidden="true"
+            ></div>
+          )}
         </div>
-
-        <button
-          onClick={toggleSidebar}
-          className="mobile-toggle-button"
-          aria-label="Toggle sidebar"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
       </div>
-
-      {isSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={toggleSidebar}></div>
-      )}
     </div>
   );
 }
