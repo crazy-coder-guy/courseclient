@@ -428,7 +428,7 @@ export default function CourseLearn() {
     return (
       <div className="min-h-screen bg-yellow-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin h-10 w-10 sm:h-12 sm:w-12 border-t-4 border-purple-900 rounded-full mx-auto mb-4"></div>
+          <div className="animate-spin h-10 w-10 sm:h-12 sm:w-12 border-t-4 border-red-950 rounded-full mx-auto mb-4"></div>
           <p className="text-gray-900 text-base sm:text-lg font-medium">Loading course content...</p>
         </div>
         <Toaster position="top-center" />
@@ -484,23 +484,41 @@ export default function CourseLearn() {
             display: ${isQualityMenuOpen ? 'block' : 'none'};
           }
           .mobile-toggle-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 48px;
-            height: 48px;
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
             background: #8b5cf6;
             color: white;
             display: none;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            z-index: 50;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+          }
+          .mobile-toggle-button:hover {
+            transform: scale(1.1);
           }
           @media (max-width: 1023px) {
             .mobile-toggle-button {
-              display: flex;
+              display: flex !important;
+            }
+            .sidebar {
+              position: fixed;
+              top: 0;
+              right: 0;
+              height: 100%;
+              width: 100%;
+              max-width: 320px;
+              background: #fefce8;
+              border-left: 1px solid #e5e7eb;
+              z-index: 900;
+              transform: translateX(${isSidebarOpen ? '0' : '100%'});
+              transition: transform 0.3s ease-in-out;
             }
           }
           .video-container {
@@ -741,7 +759,7 @@ export default function CourseLearn() {
                                 </svg>
                               ) : (
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                                  <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                                  <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 17h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
                                 </svg>
                               )}
                             </button>
@@ -805,78 +823,58 @@ export default function CourseLearn() {
                   </div>
 
                   {selectedVideo.video_description && (
-                    <div className="bg-purple-50 rounded-none p-6">
+                    <div className="bg-yellow-50 rounded-none p-6 border border-gray-200">
                       <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 bg-blue-100 rounded-none flex items-center justify-center">
                           <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
-                        <h4 className="text-lg font-semibold text-gray-900">What you'll learn</h4>
+                        <h4 className="text-lg font-semibold text-red-950">What you'll learn</h4>
                       </div>
-                      <p className="text-gray-700 leading-relaxed text-base">{selectedVideo.video_description}</p>
+                      <p className="text-gray-700 leading-relaxed text-base text-justify">{selectedVideo.video_description}</p>
                     </div>
                   )}
 
-                  <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-none p-6">
+                  <div className="bg-yellow-50 border border-gray-200 rounded-none p-6">
                     <div className="flex items-center gap-3 mb-5">
                       <div className="w-8 h-8 bg-purple-100 rounded-none flex items-center justify-center">
                         <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                         </svg>
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-900">About this course</h3>
+                      <h3 className="text-xl font-semibold text-red-950" >About this course</h3>
                     </div>
 
                     <div className="space-y-5">
-                      <p className="text-gray-700 leading-relaxed text-base">
+                      <p className="text-justify leading-relaxed text-base text-red-950 ">
                         {course?.description || 'Course description will be loaded dynamically from the database.'}
                       </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ">
                         {course?.instructor && (
-                          <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-none border border-gray-100">
-                            <div className="w-5 h-5 bg-green-100 rounded-none flex items-center justify-center mt-0.5">
-                              <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path
-                                  fillRule="evenodd"
-                                  d="M10 9a3 0 100-6 3 0 000 6zm-7 9a7 0 1114 0H3z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            </div>
+                          <div className="flex items-start gap-3 p-3 bg-red-950  text-yellow-50 rounded-none border border-gray-100">
+                           
                             <div>
-                              <span className="block text-sm font-medium text-gray-500">Instructor</span>
-                              <span className="text-gray-900 font-semibold">{course.instructor}</span>
+                              <span className="block text-sm font-medium text-yellow-50">Instructor</span>
+                              <span className="text-yellow-50  font-semibold">{course.instructor}</span>
                             </div>
                           </div>
                         )}
 
                         {course?.category && (
-                          <div className="flex items-start gap-3 p-3 bg-yellow-50  rounded-none border border-gray-100">
-                            <div className="w-5 h-5 bg-blue-100 rounded-none flex items-center justify-center mt-0.5">
-                              <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path
-                                  fillRule="evenodd"
-                                  d="M17 7a1 1 0 01-1 1H8a1 1 0 01-1-1V3a1 1 0 011-1h5a3 3 0 013 3v2zm-12 0a1 1 0 100-2 1 1 0 000 2z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            </div>
+                          <div className="flex items-start gap-3 p-3 bg-red-950  text-yellow-50  rounded-none border border-gray-100">
+                          
                             <div>
-                              <span className="block text-sm font-medium text-gray-500">Category</span>
-                              <span className="text-gray-900 font-semibold">{course.category}</span>
+                              <span className="block text-sm font-medium text-yellow-50">Category</span>
+                              <span className="text-yellow-50 font-semibold">{course.category}</span>
                             </div>
                           </div>
                         )}
 
                         {course?.level && (
                           <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-none border border-gray-100">
-                            <div className="w-5 h-5 bg-orange-100 rounded-none flex items-center justify-center mt-0.5">
-                              <svg className="w-3 h-3 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 0 00.951.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 0 00-1.175 0l-2.8 2.034c-.784-.57-1.838-.197-1.539-1.118l1.07-3.292a1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            </div>
+                           
                             <div>
                               <span className="block text-sm font-medium text-gray-500">Level</span>
                               <span className="text-gray-900 font-semibold">{course.level}</span>
@@ -892,15 +890,15 @@ export default function CourseLearn() {
           </div>
 
           <div
-            className={`fixed lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-yellow-50 border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:p-0 ${
+            className={`sidebar lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-yellow-50 border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:p-0 ${
               isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
             } lg:translate-x-0 flex flex-col`}
           >
-            <div className="p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+            <div className="p-4 border-b border-gray-200 bg-red-950 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">{course?.course_name}</h3>
-                  <p className="text-sm sm:text-sm text-gray-600 mt-1">
+                  <h3 className="text-sm sm:text-base font-semibold text-yellow-50 truncate">{course?.course_name}</h3>
+                  <p className="text-sm sm:text-sm text-yellow-50 mt-1">
                     {videos.length} videos •{' '}
                     {Math.round(videos.reduce((acc, v) => acc + (parseFloat(v.video_duration_minutes) || 0), 0) / 60)}h
                     total
@@ -918,7 +916,7 @@ export default function CourseLearn() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="flex-1 overflow-y-150 custom-scrollbar">
               {videos.length > 0 ? (
                 videos.map((video, index) => {
                   const isSelected = selectedVideo?.id === video.id;
@@ -927,8 +925,8 @@ export default function CourseLearn() {
                   return (
                     <div
                       key={video.id}
-                      className={`flex items-start p-3 sm:p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                        isSelected ? 'bg-purple-50 border-l-4 border-purple-900' : ''
+                      className={`flex items-start p-3 sm:p-4 cursor-pointer hover:bg-red-300   transition-colors border-b border-gray-100 ${
+                        isSelected ? 'bg-red-200 border-l-4 border-red-950 ' : ''
                       }`}
                       onClick={() => handleVideoSelect(video)}
                       role="button"
@@ -939,7 +937,7 @@ export default function CourseLearn() {
                         <div
                           className={`w-6 h-6 flex items-center justify-center text-xs font-medium rounded-full ${
                             isSelected
-                              ? 'text-purple-900 bg-purple-100'
+                              ? 'text-red-950 bg-purple-100'
                               : isCompleted
                               ? 'text-green-600 bg-green-100'
                               : 'text-gray-500 bg-gray-100'
@@ -965,7 +963,7 @@ export default function CourseLearn() {
                       <div className="flex-1 min-w-0">
                         <h4
                           className={`text-xs sm:text-sm font-medium line-clamp-2 leading-tight ${
-                            isSelected ? 'text-purple-900' : isCompleted ? 'text-green-600' : 'text-gray-900'
+                            isSelected ? 'text-red-950' : isCompleted ? 'text-green-600' : 'text-gray-900'
                           }`}
                         >
                           {video.video_detail || video.title || `Lecture ${index + 1}`}
