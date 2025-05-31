@@ -14,7 +14,7 @@
     "@supabase/supabase-js": "^2.49.8",
     "@tailwindcss/line-clamp": "^0.4.4",
     "@videojs/themes": "^1.0.1",
-    "hls.js": "^1.6.2",
+    "hls.js": "^1.6.4",
     "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.511.0",
