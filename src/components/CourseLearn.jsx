@@ -401,8 +401,8 @@ export default function CourseLearn() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="bg-white p-6 sm:p-8 max-w-md w-full text-center shadow-lg rounded-lg">
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center p-4">
+        <div className="bg-yellow-50 p-6 sm:p-8 max-w-md w-full text-center shadow-lg rounded-lg">
           <svg
             className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-red-500"
             fill="none"
@@ -426,7 +426,7 @@ export default function CourseLearn() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin h-10 w-10 sm:h-12 sm:w-12 border-t-4 border-purple-900 rounded-full mx-auto mb-4"></div>
           <p className="text-gray-900 text-base sm:text-lg font-medium">Loading course content...</p>
@@ -438,8 +438,8 @@ export default function CourseLearn() {
 
   if (!course || !hasPurchased) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="bg-white p-6 sm:p-8 max-w-md w-full text-center shadow-lg rounded-lg">
+      <div className="min-h-screen bg-yellow-50 flex items-center justify-center p-4">
+        <div className="bg-yellow-50 p-6 sm:p-8 max-w-md w-full text-center shadow-lg rounded-lg">
           <svg
             className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-400"
             fill="none"
@@ -469,7 +469,7 @@ export default function CourseLearn() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-yellow-50">
       <Toaster position="top-center" />
       <style>
         {`
@@ -596,7 +596,7 @@ export default function CourseLearn() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {(!isSidebarOpen || window.innerWidth >= 1024) && (
-          <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+          <header className="bg-yellow-50border-b border-gray-200 sticky top-0 z-30">
             <div className="py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
@@ -835,7 +835,7 @@ export default function CourseLearn() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {course?.instructor && (
-                          <div className="flex items-start gap-3 p-3 bg-white rounded-none border border-gray-100">
+                          <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-none border border-gray-100">
                             <div className="w-5 h-5 bg-green-100 rounded-none flex items-center justify-center mt-0.5">
                               <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path
@@ -853,7 +853,7 @@ export default function CourseLearn() {
                         )}
 
                         {course?.category && (
-                          <div className="flex items-start gap-3 p-3 bg-white rounded-none border border-gray-100">
+                          <div className="flex items-start gap-3 p-3 bg-yellow-50  rounded-none border border-gray-100">
                             <div className="w-5 h-5 bg-blue-100 rounded-none flex items-center justify-center mt-0.5">
                               <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path
@@ -871,7 +871,7 @@ export default function CourseLearn() {
                         )}
 
                         {course?.level && (
-                          <div className="flex items-start gap-3 p-3 bg-white rounded-none border border-gray-100">
+                          <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-none border border-gray-100">
                             <div className="w-5 h-5 bg-orange-100 rounded-none flex items-center justify-center mt-0.5">
                               <svg className="w-3 h-3 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 0 00.951.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 0 00-1.175 0l-2.8 2.034c-.784-.57-1.838-.197-1.539-1.118l1.07-3.292a1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 0 00.951-.69l1.07-3.292z" />
@@ -892,7 +892,7 @@ export default function CourseLearn() {
           </div>
 
           <div
-            className={`fixed lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:p-0 ${
+            className={`fixed lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-yellow-50 border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:p-0 ${
               isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
             } lg:translate-x-0 flex flex-col`}
           >

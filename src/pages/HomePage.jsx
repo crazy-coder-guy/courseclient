@@ -27,7 +27,7 @@ export default function HomePage() {
   }, []);
 
   return (
-   <div className="min-h-screen bg-gray-100 font-nunito-sans">
+   <div className="min-h-screen bg-yellow-50 font-nunito-sans">
   {/* Hero Section */}
   <div className="bg-rose-900 border-b border-gray-200 relative overflow-hidden">
     
@@ -123,9 +123,13 @@ export default function HomePage() {
           <p className="text-lg text-yellow-50 mb-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
             Master the art of Silk Saree Design with our expert-led video tutorials and workshops.
           </p>
-          <button className="bg-purple-600 hover:bg-purple-700 bg-yellow-50 px-6 py-3 font-semibold text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg animate-fade-in" style={{animationDelay: '0.4s'}}>
-            Start Learning
-          </button>
+       <button
+  className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-3 font-semibold text-sm transition-all duration-300 hover:scale-105 hover:shadow-lg animate-fade-in"
+  style={{ animationDelay: '0.4s' }}
+>
+  Start Learning
+</button>
+
         </div>
       </div>
       
@@ -141,44 +145,46 @@ export default function HomePage() {
     </div>
 
       {/* Category Tabs */}
-      <div className=" border-b border-gray-200">
-        <div className="max-w-[1340px] mx-auto px-6">
-          <div className="flex space-x-8 overflow-x-auto">
-            {[
-              'Desigining Tools',
-              'Color Matching',
-              'Zari Work',
-              'Design Sketching',
-              'Thread Techniques',
-              'Embroidery',
-              'Traditional Motifs',
-            ].map((category, index) => (
-              <button
-                key={category}
-                className={`py-4 px-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  index === 0
-                    ? 'text-purple-900 border-purple-600'
-                    : 'text-gray-600 border-transparent hover:text-purple-800 hover:border-purple-200'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+ <div className="border-b border-yellow-200">
+  <div className="max-w-[1340px] mx-auto px-6">
+    <div className="flex space-x-8 overflow-x-auto">
+      {[
+        'Designing Tools',
+        'Color Matching',
+        'Zari Work',
+        'Design Sketching',
+        'Thread Techniques',
+        'Embroidery',
+        'Traditional Motifs',
+      ].map((category, index) => (
+        <button
+          key={category}
+          className={`py-4 px-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+            index === 0
+              ? 'text-rose-900 border-rose-600'
+              : 'text-gray-600 border-transparent hover:text-rose-800 hover:border-yellow-300'
+          }`}
+        >
+          {category}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
+
 
       {/* Main Content */}
       <div className="max-w-[1340px] mx-auto px-6 py-10">
         {/* Section Header */}
-    <div className="mb-6 text-center">
-  <h2 className="text-3xl font-bold text-gray-900 mb-3">
+   <div className="mb-6 text-center">
+  <h2 className="text-3xl font-bold text-rose-900 mb-3">
     Explore the World of Silk Saree Artistry
   </h2>
-  <p className="text-gray-700 text-base">
+  <p className="text-rose-700 text-base">
     Learn age-old techniques from industry experts — from selecting the perfect silk to creating intricate zari patterns.
   </p>
 </div>
+
 
 
 
@@ -201,9 +207,10 @@ export default function HomePage() {
         {/* Show More Button */}
         {!loading && courses.length > 0 && (
           <div className="mt-8 text-center">
-            <button className="border border-purple-600 text-purple-600 hover:bg-purple-50 px-6 py-3 font-bold text-sm transition-colors">
-              Show more courses
-            </button>
+        <button className="border border-rose-600 text-rose-600 hover:bg-rose-50 px-6 py-3 font-bold text-sm transition-colors">
+  Show more courses
+</button>
+
           </div>
         )}
       </div>
@@ -215,14 +222,10 @@ button {
   border-radius: 0 !important;
 }
 
-/* Modernistic styling */
-.bg-gray-100 {
-  background-color: #f7fafc;
-}
 
 /* New custom colors */
 .bg-yellow-50 {
-  background-color: #FAF9F1;
+ 
 }
 .bg-rose-900 {
   background-color: #561C24;

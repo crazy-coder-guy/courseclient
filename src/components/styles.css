@@ -2,8 +2,13 @@
 
 body {
   font-family: 'Nunito Sans', sans-serif !important;
-  background-color: #FAF9F1 !important;
+
 }
+::selection {
+  color: #fef9c3; /* Tailwind's red-950 */
+  background: #881337; /* Optional: Tailwind's yellow-100 */
+}
+
 @keyframes fade-up {
   0% {
     opacity: 0;
