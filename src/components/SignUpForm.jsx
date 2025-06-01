@@ -27,17 +27,26 @@ function SignUpForm() {
       }
 
       const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          await apiFetch(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/check`
-          );
-          navigate(redirectUrl, { replace: true });
-        } catch (err) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setError('Network error or session expired. Please sign in again.');
-        }
+      if (!token) {
+        console.log('No token found in localStorage');
+        return;
+      }
+
+      try {
+        console.log('Checking auth with token:', token.substring(0, 10) + '...');
+        const response = await apiFetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/check`
+        );
+        console.log('Auth check successful:', response);
+        navigate(redirectUrl, { replace: true });
+      } catch (err) {
+        console.error('Auth check failed:', err.message);
+        setError('Session expired or invalid. Please sign in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('email');
+        localStorage.removeItem('firstName');
+        localStorage.removeItem('lastName');
       }
     };
 
@@ -97,8 +106,10 @@ function SignUpForm() {
       const data = await apiFetch(url, {
         method: 'POST',
         body: JSON.stringify(payload),
-        credentials: 'include', // Support cookie-based authentication
+        credentials: 'include',
       });
+
+      console.log('Sign-in/up response:', data);
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -106,8 +117,18 @@ function SignUpForm() {
       localStorage.setItem('firstName', data.user.first_name || '');
       localStorage.setItem('lastName', data.user.last_name || '');
 
-      navigate(redirectUrl, { replace: true });
+      // Verify token immediately after setting
+      try {
+        await apiFetch(`${BASE_URL}/api/auth/check`);
+        console.log('Token verified post-sign-in/up');
+        navigate(redirectUrl, { replace: true });
+      } catch (verifyErr) {
+        console.error('Token verification failed post-sign-in/up:', verifyErr.message);
+        setError('Authentication failed. Please try again.');
+        localStorage.clear();
+      }
     } catch (error) {
+      console.error('Sign-in/up error:', error.message);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -116,9 +137,7 @@ function SignUpForm() {
 
   return (
     <div className="min-h-screen bg-yellow-50">
-      {/* Main Content */}
       <div className="flex min-h-[calc(100vh-64px)]">
-        {/* Left Side - Image/Illustration */}
         <div className="hidden lg:flex lg:w-1/2 bg-yellow-50 items-center justify-center p-12">
           <div className="max-w-md text-center">
             <div className="w-64 h-64 mx-auto mb-8 bg-yellow-50 rounded-full flex items-center justify-center">
@@ -137,7 +156,6 @@ function SignUpForm() {
           </div>
         </div>
 
-        {/* Right Side - Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
