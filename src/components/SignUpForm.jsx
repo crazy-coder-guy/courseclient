@@ -32,7 +32,7 @@ function SignUpForm() {
         token: token ? token.substring(0, 10) + '...' : 'missing',
         cookies: document.cookie.includes('token=') ? 'present' : 'missing',
         userAgent: navigator.userAgent,
-        VITE_API_URL: import.meta.env.VITE_API_URL || 'https://coursebackend-io7z.onrender.com',
+        VITE_API_URL: import.meta.env.VITE_API_URL,
       });
 
       if (!token && !document.cookie.includes('token=')) {
@@ -48,6 +48,7 @@ function SignUpForm() {
         console.error(`[${new Date().toISOString()}] Auth check failed:`, {
           message: err.message,
           stack: err.stack,
+          VITE_API_URL: import.meta.env.VITE_API_URL,
         });
         setError('Session expired or invalid. Please sign in again.');
         localStorage.clear();
@@ -138,10 +139,8 @@ function SignUpForm() {
           console.error(`[${new Date().toISOString()}] Token verification attempt ${4 - retries} failed:`, {
             message: verifyErr.message,
             stack: verifyErr.stack,
+            VITE_API_URL: import.meta.env.VITE_API_URL,
           });
-          if (verifyErr.message.includes('ERR_CONNECTION_REFUSED')) {
-            console.error(`[${new Date().toISOString()}] Network error, retrying...`);
-          }
           lastError = verifyErr;
           retries--;
           if (retries > 0) {
@@ -153,6 +152,7 @@ function SignUpForm() {
       console.error(`[${new Date().toISOString()}] Token verification failed after retries:`, {
         message: lastError.message,
         stack: lastError.stack,
+        VITE_API_URL: import.meta.env.VITE_API_URL,
       });
       setError('Authentication failed. Please try again.');
       localStorage.clear();
@@ -161,6 +161,7 @@ function SignUpForm() {
       console.error(`[${new Date().toISOString()}] Sign-in/up error:`, {
         message: error.message,
         stack: error.stack,
+        VITE_API_URL: import.meta.env.VITE_API_URL,
       });
       setError(error.message === 'Unauthorized: Please sign in again' ? error.message : `Sign-in failed: ${error.message}`);
     } finally {

@@ -1,12 +1,12 @@
 export const apiFetch = async (url, options = {}) => {
-  // Fallback to production backend URL if VITE_API_URL is not defined
-  const BASE_URL = import.meta.env.VITE_API_URL || 'https://coursebackend-io7z.onrender.com';
-  
+  // Use VITE_API_URL directly without a fallback to avoid hardcoded URLs
+  const BASE_URL = import.meta.env.VITE_API_URL;
+
   console.log(`[${new Date().toISOString()}] VITE_API_URL: ${BASE_URL}, PROD mode: ${import.meta.env.PROD}`);
 
   if (!BASE_URL) {
     console.error(`[${new Date().toISOString()}] VITE_API_URL is not defined`);
-    throw new Error('API URL is not configured. Please contact support.');
+    throw new Error('API URL is not configured. Please check your environment variables.');
   }
 
   if (BASE_URL.includes('localhost') && import.meta.env.PROD) {
@@ -21,8 +21,8 @@ export const apiFetch = async (url, options = {}) => {
     ...options.headers,
   };
 
-  // Ensure proper URL construction with no double slashes
-  const fullUrl = url.startsWith('http') ? url : `${BASE_URL.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+  // Construct the full URL, ensuring no double slashes
+  const fullUrl = url.startsWith('http') ? url : `${BASE_URL.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
 
   console.log(`[${new Date().toISOString()}] Making request to ${fullUrl} with token: ${token ? 'present' : 'missing'}`, {
     headers,
