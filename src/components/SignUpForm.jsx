@@ -40,9 +40,7 @@ function SignUpForm() {
       }
 
       try {
-        const response = await apiFetch(
-          `${import.meta.env.VITE_API_URL}/api/auth/check`
-        );
+        const response = await apiFetch('/api/auth/check');
         console.log(`[${new Date().toISOString()}] Auth check successful:`, response);
         navigate(redirectUrl, { replace: true });
       } catch (err) {
@@ -96,11 +94,7 @@ function SignUpForm() {
     setLoading(true);
 
     try {
-      const BASE_URL = import.meta.env.VITE_API_URL;
-      if (!BASE_URL) {
-        throw new Error('API URL is not configured. Please contact support.');
-      }
-      const url = isLogin ? `${BASE_URL}/api/auth/signin` : `${BASE_URL}/api/auth/signup`;
+      const url = isLogin ? '/api/auth/signin' : '/api/auth/signup';
 
       const payload = isLogin
         ? { email: formData.email, password: formData.password }
@@ -130,20 +124,35 @@ function SignUpForm() {
       localStorage.setItem('firstName', data.user.first_name || '');
       localStorage.setItem('lastName', data.user.last_name || '');
 
-      // Verify token immediately
-      try {
-        await apiFetch(`${BASE_URL}/api/auth/check`);
-        console.log(`[${new Date().toISOString()}] Token verified post-sign-in/up`);
-        navigate(redirectUrl, { replace: true });
-      } catch (verifyErr) {
-        console.error(`[${new Date().toISOString()}] Token verification failed post-sign-in/up:`, {
-          message: verifyErr.message,
-          stack: verifyErr.stack,
-        });
-        setError('Authentication failed. Please try again.');
-        localStorage.clear();
-        document.cookie = 'token=; Max-Age=0; path=/;';
+      // Verify token with retry mechanism
+      let retries = 3;
+      let lastError = null;
+      while (retries > 0) {
+        try {
+          await apiFetch('/api/auth/check');
+          console.log(`[${new Date().toISOString()}] Token verified post-sign-in/up`);
+          navigate(redirectUrl, { replace: true });
+          return;
+        } catch (verifyErr) {
+          console.error(`[${new Date().toISOString()}] Token verification attempt ${4 - retries} failed:`, {
+            message: verifyErr.message,
+            stack: verifyErr.stack,
+          });
+          lastError = verifyErr;
+          retries--;
+          if (retries > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+          }
+        }
       }
+
+      console.error(`[${new Date().toISOString()}] Token verification failed after retries:`, {
+        message: lastError.message,
+        stack: lastError.stack,
+      });
+      setError('Authentication failed. Please try again.');
+      localStorage.clear();
+      document.cookie = 'token=; Max-Age=0; path=/;';
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Sign-in/up error:`, {
         message: error.message,

@@ -1,4 +1,14 @@
 export const apiFetch = async (url, options = {}) => {
+  const BASE_URL = import.meta.env.VITE_API_URL;
+  if (!BASE_URL) {
+    console.error(`[${new Date().toISOString()}] VITE_API_URL is not defined`);
+    throw new Error('API URL is not configured. Please contact support.');
+  }
+  if (BASE_URL.includes('localhost') && import.meta.env.PROD) {
+    console.error(`[${new Date().toISOString()}] Invalid VITE_API_URL in production: ${BASE_URL}`);
+    throw new Error('Invalid API configuration for production environment.');
+  }
+
   const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
@@ -6,19 +16,21 @@ export const apiFetch = async (url, options = {}) => {
     ...options.headers,
   };
 
-  console.log(`[${new Date().toISOString()}] Making request to ${url} with token: ${token ? 'present' : 'missing'}`, {
+  const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+
+  console.log(`[${new Date().toISOString()}] Making request to ${fullUrl} with token: ${token ? 'present' : 'missing'}`, {
     headers,
     credentials: options.credentials || 'include',
   });
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(fullUrl, {
       ...options,
       headers,
-      credentials: 'include', // Support cookie-based authentication
+      credentials: 'include',
     });
 
-    console.log(`[${new Date().toISOString()}] Response from ${url}:`, {
+    console.log(`[${new Date().toISOString()}] Response from ${fullUrl}:`, {
       status: response.status,
       statusText: response.statusText,
     });
@@ -30,7 +42,7 @@ export const apiFetch = async (url, options = {}) => {
       } catch (e) {
         errorData = { error: `HTTP error! status: ${response.status}` };
       }
-      console.error(`[${new Date().toISOString()}] API error for ${url}:`, {
+      console.error(`[${new Date().toISOString()}] API error for ${fullUrl}:`, {
         status: response.status,
         error: errorData.error,
       });
@@ -42,7 +54,7 @@ export const apiFetch = async (url, options = {}) => {
 
     return await response.json();
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] API fetch error for ${url}:`, {
+    console.error(`[${new Date().toISOString()}] API fetch error for ${fullUrl}:`, {
       error: error.message,
       stack: error.stack,
     });
