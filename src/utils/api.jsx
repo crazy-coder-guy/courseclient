@@ -6,7 +6,10 @@ export const apiFetch = async (url, options = {}) => {
     ...options.headers,
   };
 
-  console.log(`Making request to ${url} with token: ${token ? 'present' : 'missing'}`);
+  console.log(`[${new Date().toISOString()}] Making request to ${url} with token: ${token ? 'present' : 'missing'}`, {
+    headers,
+    credentials: options.credentials || 'include',
+  });
 
   try {
     const response = await fetch(url, {
@@ -15,14 +18,34 @@ export const apiFetch = async (url, options = {}) => {
       credentials: 'include', // Support cookie-based authentication
     });
 
+    console.log(`[${new Date().toISOString()}] Response from ${url}:`, {
+      status: response.status,
+      statusText: response.statusText,
+    });
+
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { error: `HTTP error! status: ${response.status}` };
+      }
+      console.error(`[${new Date().toISOString()}] API error for ${url}:`, {
+        status: response.status,
+        error: errorData.error,
+      });
+      if (response.status === 401) {
+        throw new Error('Unauthorized: Please sign in again');
+      }
       throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error(`API fetch error for ${url}:`, error.message);
+    console.error(`[${new Date().toISOString()}] API fetch error for ${url}:`, {
+      error: error.message,
+      stack: error.stack,
+    });
     throw error;
   }
 };
@@ -34,7 +57,7 @@ export const isLocalStorageAvailable = () => {
     localStorage.removeItem(testKey);
     return true;
   } catch (e) {
-    console.error('localStorage is not available:', e.message);
+    console.error(`[${new Date().toISOString()}] localStorage is not available:`, e.message);
     return false;
   }
 };

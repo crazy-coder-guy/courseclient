@@ -22,31 +22,34 @@ function SignUpForm() {
   useEffect(() => {
     const checkAuth = async () => {
       if (!isLocalStorageAvailable()) {
-        setError('Storage is disabled in your browser. Please enable it or try a different browser.');
+        setError('Storage is disabled on your device. Please enable cookies and local storage or try a different browser.');
+        console.error(`[${new Date().toISOString()}] localStorage unavailable on device`);
         return;
       }
 
       const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('No token found in localStorage');
+      console.log(`[${new Date().toISOString()}] Token check:`, {
+        token: token ? token.substring(0, 10) + '...' : 'missing',
+        cookies: document.cookie.includes('token=') ? 'present' : 'missing',
+        userAgent: navigator.userAgent,
+      });
+
+      if (!token && !document.cookie.includes('token=')) {
+        console.log(`[${new Date().toISOString()}] No token found in localStorage or cookies`);
         return;
       }
 
       try {
-        console.log('Checking auth with token:', token.substring(0, 10) + '...');
         const response = await apiFetch(
           `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/check`
         );
-        console.log('Auth check successful:', response);
+        console.log(`[${new Date().toISOString()}] Auth check successful:`, response);
         navigate(redirectUrl, { replace: true });
       } catch (err) {
-        console.error('Auth check failed:', err.message);
+        console.error(`[${new Date().toISOString()}] Auth check failed:`, err.message);
         setError('Session expired or invalid. Please sign in again.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('email');
-        localStorage.removeItem('firstName');
-        localStorage.removeItem('lastName');
+        localStorage.clear();
+        document.cookie = 'token=; Max-Age=0; path=/;';
       }
     };
 
@@ -83,7 +86,7 @@ function SignUpForm() {
     if (!validateForm()) return;
 
     if (!isLocalStorageAvailable()) {
-      setError('Storage is disabled in your browser. Please enable it or try a different browser.');
+      setError('Storage is disabled on your device. Please enable cookies and local storage or try a different browser.');
       return;
     }
 
@@ -109,7 +112,11 @@ function SignUpForm() {
         credentials: 'include',
       });
 
-      console.log('Sign-in/up response:', data);
+      console.log(`[${new Date().toISOString()}] Sign-in/up response:`, {
+        userId: data.user.id,
+        email: data.user.email,
+        token: data.token.substring(0, 10) + '...',
+      });
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -117,19 +124,20 @@ function SignUpForm() {
       localStorage.setItem('firstName', data.user.first_name || '');
       localStorage.setItem('lastName', data.user.last_name || '');
 
-      // Verify token immediately after setting
+      // Verify token immediately
       try {
         await apiFetch(`${BASE_URL}/api/auth/check`);
-        console.log('Token verified post-sign-in/up');
+        console.log(`[${new Date().toISOString()}] Token verified post-sign-in/up`);
         navigate(redirectUrl, { replace: true });
       } catch (verifyErr) {
-        console.error('Token verification failed post-sign-in/up:', verifyErr.message);
+        console.error(`[${new Date().toISOString()}] Token verification failed post-sign-in/up:`, verifyErr.message);
         setError('Authentication failed. Please try again.');
         localStorage.clear();
+        document.cookie = 'token=; Max-Age=0; path=/;';
       }
     } catch (error) {
-      console.error('Sign-in/up error:', error.message);
-      setError(error.message);
+      console.error(`[${new Date().toISOString()}] Sign-in/up error:`, error.message);
+      setError(error.message === 'Unauthorized: Please sign in again' ? error.message : `Sign-in failed: ${error.message}`);
     } finally {
       setLoading(false);
     }
