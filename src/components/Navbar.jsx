@@ -92,24 +92,24 @@ export default function ModernNavbar() {
   }, [isChatOpen, isLoggedIn, userData, isWelcomeShown]);
 
   // Fetch chat messages for selected course
-  useEffect(() => {
-    if (!selectedCourse || !isLoggedIn) return;
+useEffect(() => {
+  if (!selectedCourse || !isLoggedIn) return;
 
-    const fetchMessages = async () => {
-      try {
-        const response = await apiFetch(`/api/messages/${selectedCourse.id}`);
-        // Keep welcome message and add course-specific messages
-        const welcomeMsg = messages.find((msg) => msg.id === 'welcome');
-        const courseMessages = welcomeMsg ? [welcomeMsg, ...response] : response;
-        setMessages(courseMessages);
-      } catch (err) {
-        console.error(`[${new Date().toISOString()}] Error fetching chat history:`, err.message);
-        setChatError('Failed to load chat history. Please try again later.');
-      }
-    };
+  const fetchMessages = async () => {
+    try {
+      const response = await apiFetch(`/api/messages/${selectedCourse.id}`);
+      // Keep welcome message and add course-specific messages
+      const welcomeMsg = messages.find((msg) => msg.id === 'welcome');
+      const courseMessages = welcomeMsg ? [welcomeMsg, ...response] : response;
+      setMessages(courseMessages);
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] Error fetching chat history:`, err.message);
+      setChatError('Failed to load chat history. Please try again later.');
+    }
+  };
 
-    fetchMessages();
-  }, [selectedCourse, messages]);
+  fetchMessages();
+}, [selectedCourse, messages]);
 
   const handleCourseSelection = (course) => {
     setSelectedCourse(course);
