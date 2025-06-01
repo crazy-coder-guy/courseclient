@@ -56,22 +56,34 @@ export default function ModernNavbar() {
 
     const fetchPurchasedCourses = async () => {
       try {
-        const { data } = await apiFetch('/api/user/purchased-courses');
-        setPurchasedCourses(data);
-        
+        console.log(`[${new Date().toISOString()}] Fetching purchased courses for user`, {
+          userId: userData?.userId,
+        });
+        const response = await apiFetch('/api/user/purchased-courses');
+        console.log(`[${new Date().toISOString()}] Purchased courses response`, {
+          courseCount: response.length,
+          courses: response.map(c => c.course_name),
+        });
+        setPurchasedCourses(response);
+
         // Show welcome message if not shown yet
         if (!isWelcomeShown) {
-          setMessages([{
-            id: 'welcome',
-            content: `Welcome ${userData?.first_name || 'User'}! I'm here to help you with your courses. Please select a course to get started.`,
-            sender: 'system',
-            created_at: new Date().toISOString(),
-          }]);
+          setMessages([
+            {
+              id: 'welcome',
+              content: `Welcome ${userData?.first_name || 'User'}! I'm here to help you with your courses. Please select a course to get started.`,
+              sender: 'system',
+              created_at: new Date().toISOString(),
+            },
+          ]);
           setIsWelcomeShown(true);
           setChatStep('course-selection');
         }
       } catch (err) {
-        console.error(`[${new Date().toISOString()}] Error fetching purchased courses:`, err.message);
+        console.error(`[${new Date().toISOString()}] Error fetching purchased courses:`, {
+          message: err.message,
+          stack: err.stack,
+        });
         setChatError('Failed to load your courses. Please try again later.');
       }
     };
@@ -85,11 +97,10 @@ export default function ModernNavbar() {
 
     const fetchMessages = async () => {
       try {
-        const { data } = await apiFetch(`/api/messages/${selectedCourse.id}`);
-        
+        const response = await apiFetch(`/api/messages/${selectedCourse.id}`);
         // Keep welcome message and add course-specific messages
-        const welcomeMsg = messages.find(msg => msg.id === 'welcome');
-        const courseMessages = welcomeMsg ? [welcomeMsg, ...data] : data;
+        const welcomeMsg = messages.find((msg) => msg.id === 'welcome');
+        const courseMessages = welcomeMsg ? [welcomeMsg, ...response] : response;
         setMessages(courseMessages);
       } catch (err) {
         console.error(`[${new Date().toISOString()}] Error fetching chat history:`, err.message);
@@ -98,12 +109,12 @@ export default function ModernNavbar() {
     };
 
     fetchMessages();
-  }, [selectedCourse]);
+  }, [selectedCourse, messages]);
 
   const handleCourseSelection = (course) => {
     setSelectedCourse(course);
     setChatStep('action-selection');
-    
+
     // Add course selection message
     const courseSelectionMsg = {
       id: `course-${course.id}`,
@@ -111,13 +122,13 @@ export default function ModernNavbar() {
       sender: 'system',
       created_at: new Date().toISOString(),
     };
-    
-    setMessages(prev => [...prev, courseSelectionMsg]);
+
+    setMessages((prev) => [...prev, courseSelectionMsg]);
   };
 
   const handleActionSelection = (action) => {
     setSelectedAction(action);
-    
+
     if (action === 'help') {
       handleSendMessage(null, 'help');
     } else if (action === 'doubt') {
@@ -128,13 +139,13 @@ export default function ModernNavbar() {
         sender: 'system',
         created_at: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, doubtMsg]);
+      setMessages((prev) => [...prev, doubtMsg]);
     }
   };
 
   const handleSendMessage = async (e, messageType = 'doubt') => {
     if (e) e.preventDefault();
-    
+
     if (messageType !== 'help' && (!newMessage.trim() || newMessage.length > 50)) {
       setChatError('Please enter a message (max 50 characters)');
       return;
@@ -146,27 +157,27 @@ export default function ModernNavbar() {
     }
 
     try {
-      const { data } = await apiFetch(`/api/messages/${selectedCourse.id}`, {
+      const response = await apiFetch(`/api/messages/${selectedCourse.id}`, {
         method: 'POST',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           content: messageType === 'help' ? null : newMessage,
-          message_type: messageType
+          message_type: messageType,
         }),
       });
 
       // Add user message and auto response to chat
       const newMessages = [];
-      if (data.userMessage) {
-        newMessages.push(data.userMessage);
+      if (response.userMessage) {
+        newMessages.push(response.userMessage);
       }
-      if (data.autoResponse) {
-        newMessages.push(data.autoResponse);
+      if (response.autoResponse) {
+        newMessages.push(response.autoResponse);
       }
 
-      setMessages(prev => [...prev, ...newMessages]);
+      setMessages((prev) => [...prev, ...newMessages]);
       setNewMessage('');
       setChatError(null);
-      
+
       // Reset chat flow after sending message
       if (messageType === 'help') {
         setChatStep('course-selection');
@@ -299,7 +310,7 @@ export default function ModernNavbar() {
         <div className="fixed inset-0 flex items-center justify-center z-50">
           {/* Background Blur Overlay */}
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
-          
+
           {/* Chat Container */}
           <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl border border-gray-200 max-h-[80vh] flex flex-col">
             <div className="p-4 border-b border-gray-200">
@@ -339,8 +350,8 @@ export default function ModernNavbar() {
                       <div
                         key={message.id || index}
                         className={`p-3 rounded-lg text-sm ${
-                          message.sender === 'system' 
-                            ? 'bg-blue-50 border border-blue-200 text-blue-800' 
+                          message.sender === 'system'
+                            ? 'bg-blue-50 border border-blue-200 text-blue-800'
                             : 'bg-gray-100 text-rose-900'
                         }`}
                       >
@@ -357,7 +368,7 @@ export default function ModernNavbar() {
                     <div className="mt-4">
                       <p className="text-sm font-medium text-rose-900 mb-2">Select a course:</p>
                       <div className="space-y-2">
-                        {purchasedCourses.map(course => (
+                        {purchasedCourses.map((course) => (
                           <button
                             key={course.id}
                             onClick={() => handleCourseSelection(course)}
