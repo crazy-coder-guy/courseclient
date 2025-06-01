@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { apiFetch, isLocalStorageAvailable } from '../utils/api';
 
 function SignUpForm() {
   const [isLogin, setIsLogin] = useState(false);
@@ -20,31 +21,22 @@ function SignUpForm() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (!isLocalStorageAvailable()) {
+        setError('Storage is disabled in your browser. Please enable it or try a different browser.');
+        return;
+      }
+
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const response = await fetch(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/check`,
-            {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            }
+          await apiFetch(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/check`
           );
-
-          if (response.ok) {
-            navigate(redirectUrl, { replace: true });
-          } else {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setError('Your session has expired. Please sign in again.');
-          }
+          navigate(redirectUrl, { replace: true });
         } catch (err) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          setError('Network error. Please try again.');
+          setError('Network error or session expired. Please sign in again.');
         }
       }
     };
@@ -81,6 +73,11 @@ function SignUpForm() {
     setError(null);
     if (!validateForm()) return;
 
+    if (!isLocalStorageAvailable()) {
+      setError('Storage is disabled in your browser. Please enable it or try a different browser.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -97,19 +94,11 @@ function SignUpForm() {
             newsletter: formData.newsletter,
           };
 
-      const response = await fetch(url, {
+      const data = await apiFetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
+        credentials: 'include', // Support cookie-based authentication
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Something went wrong');
-      }
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
