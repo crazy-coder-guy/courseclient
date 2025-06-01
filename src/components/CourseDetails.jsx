@@ -269,12 +269,17 @@ const { daysRemaining, formattedDate } = useMemo(() => {
 
   const handleButtonClick = () => {
     const token = localStorage.getItem('token');
+     const redirectUrl = `/courses/${courseId}/payment`;
     if (hasPurchased) {
       navigate(`/courses/${courseId}/learn`);
     } else if (token) {
       navigate(`/courses/${courseId}/payment`);
     } else {
-      navigate(`/signup?redirect=/courses/${courseId}/payment`);
+     // Save to session storage
+  sessionStorage.setItem('redirectAfterSignup', redirectUrl);
+
+  // Navigate to signup page
+  navigate(`/signup?redirect=${encodeURIComponent(redirectUrl)}`);
     }
   };
 
@@ -761,23 +766,24 @@ const { daysRemaining, formattedDate } = useMemo(() => {
 )}
 
                       <div className="space-y-2 mb-4">
-                        <button
-                          onClick={handleButtonClick}
-                          className="group relative w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white py-3 px-4 font-bold text-base transition-all duration-300 ease-out transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/25 active:scale-[0.98] active:shadow-lg active:shadow-purple-600/40 overflow-hidden"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out"></div>
-                          <div className="absolute inset-0 bg-yellow-50/20 scale-0 group-active:scale-110 transition-transform duration-200 ease-out"></div>
-                          <div className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-purple-300/30 to-purple-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-sm">
-                            Start Learning
-                          </span>
-                          <div className="absolute inset-0 border-2 border-purple-400/0 group-hover:border-purple-400/50 transition-colors duration-300"></div>
-                          <div className="absolute top-0 left-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="absolute top-0 right-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="absolute bottom-0 left-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="absolute bottom-0 right-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        </button>
-                      </div>
+  <button
+    onClick={handleButtonClick}
+    className="group relative w-full bg-red-950 hover:bg-red-900 text-yellow-50 py-3 px-4 font-bold text-base transition-all duration-300 ease-out transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/25 active:scale-[0.98] active:shadow-lg active:shadow-purple-600/40 overflow-hidden"
+  >
+    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out"></div>
+    <div className="absolute inset-0 bg-yellow-50/20 scale-0 group-active:scale-110 transition-transform duration-200 ease-out"></div>
+    <div className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-purple-300/30 to-purple-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-sm">
+      Start Learning
+    </span>
+    <div className="absolute inset-0 border-2 border-purple-400/0 group-hover:border-purple-400/50 transition-colors duration-300"></div>
+    <div className="absolute top-0 left-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <div className="absolute top-0 right-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <div className="absolute bottom-0 left-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <div className="absolute bottom-0 right-0 w-2 h-2 bg-yellow-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+  </button>
+</div>
+
                       <div className="text-center mb-4">
                         <h4 className="font-semibold text-gray-900 mb-1">Subscribe to Thugil Creation's top courses</h4>
                         <p className="text-xs text-gray-600 mb-2">
@@ -785,7 +791,7 @@ const { daysRemaining, formattedDate } = useMemo(() => {
                         </p>
                         <button
                           disabled
-                          className="w-full bg-gray-300 text-gray-600 py-2 px-3 font-bold no-border-radius cursor-not-allowed"
+                          className="w-full bg-red-100 text-red-500 py-2 px-3 font-bold no-border-radius cursor-not-allowed"
                         >
                           Start subscription
                         </button>
@@ -810,22 +816,23 @@ const { daysRemaining, formattedDate } = useMemo(() => {
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center gap-1 mb-2 text-purple-600 text-sm">
-                        <div className="w-5 h-5 bg-purple-600 no-border-radius flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">P</span>
-                        </div>
-                        <span>This Premium course is included in plans</span>
-                      </div>
+                      <div className="flex items-center gap-1 mb-2 text-red-950 text-sm">
+  <div className="w-5 h-5 bg-red-950 flex items-center justify-center">
+    <span className="bg-red-950 text-yellow-50 text-xs font-bold">P</span>
+  </div>
+  <span>This Premium course is included in plans</span>
+</div>
+
                       <div className="mb-4">
                         {isDiscounted && discountPercentage > 0 ? (
                           <div className="flex items-baseline gap-2 mb-1">
-                            <span className="text-2xl font-bold text-gray-900">
+                            <span className="text-2xl font-bold text-red-950">
                               ₹{finalPrice.toFixed(0)}
                             </span>
                             <span className="text-base text-gray-500 line-through">
                               ₹{course.price.toLocaleString()}
                             </span>
-                            <span className="text-xs font-bold text-white bg-purple-600 px-2 py-1 no-border-radius">
+                            <span className="text-xs font-bold text-white bg-red-950 px-2 py-1 no-border-radius">
                               {discountPercentage}% off
                             </span>
                           </div>
@@ -847,37 +854,38 @@ const { daysRemaining, formattedDate } = useMemo(() => {
                       </div>
                       <div className="space-y-2 mb-4">
                         <button
-                          onClick={handleButtonClick}
-                          className="group relative w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white py-3 px-4 font-bold text-base transition-all duration-300 ease-out transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/25 active:scale-[0.98] active:shadow-lg active:shadow-purple-600/40 overflow-hidden"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out"></div>
-                          <div className="absolute inset-0 bg-white/20 scale-0 group-active:scale-110 transition-transform duration-200 ease-out"></div>
-                          <div className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-purple-300/30 to-purple-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-sm">
-                            Buy Now
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="20"
-                              height="20"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="lucide lucide-wallet-cards transition-all transform opacity-0 scale-0 group-hover:opacity-100 group-hover:scale-100 group-active:scale-110 group-active:rotate-6 duration-300"
-                            >
-                              <rect width="18" height="18" x="3" y="3" rx="2" />
-                              <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" />
-                              <path d="M3 11h3c.8 0 1.6.3 2.1.9l1.1.9c1.6 1.6 4.1 1.6 5.7 0l1.1-.9c.5-.5 1.3-.9 2.1-.9H21" />
-                            </svg>
-                          </span>
-                          <div className="absolute inset-0 border-2 border-purple-400/0 group-hover:border-purple-400/50 transition-colors duration-300"></div>
-                          <div className="absolute top-0 left-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="absolute top-0 right-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="absolute bottom-0 left-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="absolute bottom-0 right-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        </button>
+  onClick={handleButtonClick}
+  className="group relative w-full bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 text-yellow-50 py-3 px-4 font-bold text-base transition-all duration-300 ease-out transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-red-600/25 active:scale-[0.98] active:shadow-lg active:shadow-red-700/40 overflow-hidden"
+>
+  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out"></div>
+  <div className="absolute inset-0 bg-white/20 scale-0 group-active:scale-110 transition-transform duration-200 ease-out"></div>
+  <div className="absolute inset-0 bg-gradient-to-r from-red-400/0 via-red-300/30 to-red-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+  <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-sm">
+    Buy Now
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="lucide lucide-wallet-cards transition-all transform opacity-0 scale-0 group-hover:opacity-100 group-hover:scale-100 group-active:scale-110 group-active:rotate-6 duration-300"
+    >
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" />
+      <path d="M3 11h3c.8 0 1.6.3 2.1.9l1.1.9c1.6 1.6 4.1 1.6 5.7 0l1.1-.9c.5-.5 1.3-.9 2.1-.9H21" />
+    </svg>
+  </span>
+  <div className="absolute inset-0 border-2 border-red-400/0 group-hover:border-red-400/50 transition-colors duration-300"></div>
+  <div className="absolute top-0 left-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+  <div className="absolute top-0 right-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+  <div className="absolute bottom-0 left-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+  <div className="absolute bottom-0 right-0 w-2 h-2 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+</button>
+
                       </div>
                       <div className="text-center mb-4">
                         <h4 className="font-semibold text-gray-900 mb-1">Subscribe to Thugil Creation's top courses</h4>

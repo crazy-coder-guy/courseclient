@@ -471,15 +471,21 @@ export default function ModernNavbar() {
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="flex-1 px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded hover:bg-gray-800 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm font-medium bg-red-950 text-white rounded hover:bg-gray-800 transition-colors"
                   >
                     Log out
                   </button>
                 </>
               ) : (
                 <button
-                  onClick={() => navigate('/signup')}
-                  className="flex-1 px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded hover:bg-gray-800 transition-colors"
+onClick={() => {
+  const currentUrl = window.location.pathname + window.location.search;
+  sessionStorage.setItem('redirectAfterSignup', currentUrl);
+  navigate(`/signup?redirect=${encodeURIComponent(currentUrl)}`);
+}}
+
+
+                  className="flex-1 px-4 py-2 text-sm font-medium bg-red-950 text-white rounded hover:bg-gray-800 transition-colors"
                 >
                   Sign up
                 </button>

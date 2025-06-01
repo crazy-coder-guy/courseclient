@@ -10,6 +10,7 @@ export default function CourseLearn() {
   const [course, setCourse] = useState(null);
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasPurchased, setHasPurchased] = useState(false);
@@ -24,9 +25,43 @@ export default function CourseLearn() {
   const [volume, setVolume] = useState(0.7);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isQualityMenuOpen, setIsQualityMenuOpen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeoutRef = useRef(null);
   const progressSaveTimeoutRef = useRef(null); // For debouncing progress saves
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  // Hide controls after inactivity
+  const hideControls = useCallback(() => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 4000);
+  }, []);
+
+  // Show controls and reset hide timer
+  const showControlsWithTimeout = useCallback(() => {
+    setShowControls(true);
+    hideControls();
+  }, [hideControls]);
+
+  // Keep controls visible on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) {
+        setShowControls(true); // Always show controls on mobile
+      } else {
+        showControlsWithTimeout();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showControlsWithTimeout]);
 
   // Initialize HLS player and handle quality levels
   useEffect(() => {
@@ -157,8 +192,14 @@ export default function CourseLearn() {
     const video = videoRef.current;
     if (!video) return;
 
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => {
+      setIsPlaying(true);
+      showControlsWithTimeout();
+    };
+    const handlePause = () => {
+      setIsPlaying(false);
+      showControlsWithTimeout();
+    };
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
       // Debounce progress saving
@@ -177,10 +218,16 @@ export default function CourseLearn() {
       setIsPlaying(false);
       saveProgress(video.currentTime, true); // Save as completed when video ends
       // Auto-play next video
-      const currentIndex = videos.findIndex((v) => v.id === selectedVideo.id);
-      if (currentIndex < videos.length - 1) {
-        setSelectedVideo(videos[currentIndex + 1]);
+      if (currentVideoIndex < videos.length - 1) {
+        setSelectedVideo(videos[currentVideoIndex + 1]);
+        setCurrentVideoIndex(currentVideoIndex + 1);
       }
+    };
+    const handleMouseMove = () => {
+      showControlsWithTimeout();
+    };
+    const handleClick = () => {
+      showControlsWithTimeout();
     };
 
     video.addEventListener('play', handlePlay);
@@ -189,6 +236,8 @@ export default function CourseLearn() {
     video.addEventListener('durationchange', handleDurationChange);
     video.addEventListener('volumechange', handleVolumeChange);
     video.addEventListener('ended', handleEnded);
+    video.addEventListener('mousemove', handleMouseMove);
+    video.addEventListener('click', handleClick);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
@@ -198,12 +247,17 @@ export default function CourseLearn() {
       video.removeEventListener('durationchange', handleDurationChange);
       video.removeEventListener('volumechange', handleVolumeChange);
       video.removeEventListener('ended', handleEnded);
+      video.removeEventListener('mousemove', handleMouseMove);
+      video.removeEventListener('click', handleClick);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       if (progressSaveTimeoutRef.current) {
         clearTimeout(progressSaveTimeoutRef.current);
       }
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
     };
-  }, [selectedVideo, saveProgress, videos]);
+  }, [selectedVideo, saveProgress, videos, currentVideoIndex, showControlsWithTimeout]);
 
   // Handle quality change
   const handleQualityChange = useCallback(
@@ -213,14 +267,16 @@ export default function CourseLearn() {
         hlsRef.current.currentLevel = level;
       }
       setIsQualityMenuOpen(false);
+      showControlsWithTimeout();
     },
-    []
+    [showControlsWithTimeout]
   );
 
   // Toggle quality menu
   const toggleQualityMenu = useCallback(() => {
     setIsQualityMenuOpen((prev) => !prev);
-  }, []);
+    showControlsWithTimeout();
+  }, [showControlsWithTimeout]);
 
   // Toggle play/pause
   const togglePlayPause = useCallback(() => {
@@ -231,7 +287,8 @@ export default function CourseLearn() {
         videoRef.current.play().catch((e) => console.error('Play failed:', e));
       }
     }
-  }, [isPlaying]);
+    showControlsWithTimeout();
+  }, [isPlaying, showControlsWithTimeout]);
 
   // Handle seek
   const handleSeek = useCallback(
@@ -240,8 +297,9 @@ export default function CourseLearn() {
         videoRef.current.currentTime = time;
         saveProgress(time, videoRef.current.currentTime >= videoRef.current.duration * 0.95);
       }
+      showControlsWithTimeout();
     },
-    [saveProgress]
+    [saveProgress, showControlsWithTimeout]
   );
 
   // Handle volume change
@@ -257,7 +315,8 @@ export default function CourseLearn() {
     if (videoRef.current) {
       videoRef.current.muted = !videoRef.current.muted;
     }
-  }, []);
+    showControlsWithTimeout();
+  }, [showControlsWithTimeout]);
 
   // Toggle fullscreen
   const toggleFullscreen = useCallback(() => {
@@ -270,7 +329,31 @@ export default function CourseLearn() {
     } else {
       document.exitFullscreen();
     }
-  }, []);
+    showControlsWithTimeout();
+  }, [showControlsWithTimeout]);
+
+  // Handle previous/next video navigation
+  const handlePreviousVideo = useCallback(() => {
+    if (currentVideoIndex > 0) {
+      setSelectedVideo(videos[currentVideoIndex - 1]);
+      setCurrentVideoIndex(currentVideoIndex - 1);
+      setQualityLevels([]);
+      setSelectedQuality(-1);
+      setIsQualityMenuOpen(false);
+    }
+    showControlsWithTimeout();
+  }, [currentVideoIndex, videos, showControlsWithTimeout]);
+
+  const handleNextVideo = useCallback(() => {
+    if (currentVideoIndex < videos.length - 1) {
+      setSelectedVideo(videos[currentVideoIndex + 1]);
+      setCurrentVideoIndex(currentVideoIndex + 1);
+      setQualityLevels([]);
+      setSelectedQuality(-1);
+      setIsQualityMenuOpen(false);
+    }
+    showControlsWithTimeout();
+  }, [currentVideoIndex, videos, showControlsWithTimeout]);
 
   // Format time
   const formatTime = useCallback((time) => {
@@ -351,6 +434,7 @@ export default function CourseLearn() {
           // Select the first uncompleted video or the first video if all are completed
           const uncompletedVideo = videoData.find((video) => !video.progress?.is_completed) || videoData[0];
           setSelectedVideo(uncompletedVideo);
+          setCurrentVideoIndex(videoData.findIndex((video) => video.id === uncompletedVideo.id));
         }
       } catch (err) {
         console.error('Fetch error:', err);
@@ -377,6 +461,7 @@ export default function CourseLearn() {
     (video) => {
       if (video?.id !== selectedVideo?.id) {
         setSelectedVideo(video);
+        setCurrentVideoIndex(videos.findIndex((v) => v.id === video.id));
         setQualityLevels([]);
         setSelectedQuality(-1);
         setIsQualityMenuOpen(false);
@@ -385,7 +470,7 @@ export default function CourseLearn() {
         setIsSidebarOpen(false);
       }
     },
-    [selectedVideo]
+    [selectedVideo, videos]
   );
 
   // Toggle sidebar
@@ -397,7 +482,8 @@ export default function CourseLearn() {
       }
       return newState;
     });
-  }, []);
+    showControlsWithTimeout();
+  }, [showControlsWithTimeout]);
 
   if (error) {
     return (
@@ -473,24 +559,131 @@ export default function CourseLearn() {
       <Toaster position="top-center" />
       <style>
         {`
-          .quality-menu {
-            position: absolute;
-            bottom: ${isFullscreen ? '70px' : '50px'};
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            border-radius: 4px;
-            padding: 10px;
-            z-index: 100;
-            display: ${isQualityMenuOpen ? 'block' : 'none'};
+          .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-width: 100%;
           }
-          .mobile-toggle-button {
+          .video-controls {
             position: absolute;
-            bottom: 30px;
-            right: 30px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(69, 10, 10, 0.7);
+            padding: 0.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            color: #fef08a;
+            transition: opacity 0.3s ease;
+            opacity: ${showControls ? '1' : '0'};
+            pointer-events: ${showControls ? 'auto' : 'none'};
+            z-index: 10;
+          }
+          .video-container:hover .video-controls {
+            opacity: 1;
+            pointer-events: auto;
+          }
+          .progress-container {
+            width: 100%;
+            height: 0.4rem;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+          }
+          .progress-bar {
+            height: 100%;
+            background: #fef08a;
+            transition: width 0.1s;
+          }
+         .controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem; /* Reduced */
+  font-size: 0.75rem; /* Smaller base font */
+}
+
+.left-controls,
+.right-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem; /* Reduced */
+  flex-wrap: wrap;
+}
+
+.control-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem; /* Reduced padding */
+  color: #fef08a;
+  font-size: 0.75rem;
+  transition: opacity 0.2s ease;
+}
+
+.control-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.volume-container {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem; /* Slightly tighter */
+}
+
+.volume-slider {
+  width: clamp(40px, 10vw, 70px); /* Reduced size */
+  cursor: pointer;
+}
+
+.time-display {
+  color: #fef08a;
+  font-size: 0.7rem; /* Smaller text */
+}
+
+.quality-menu {
+  position: absolute;
+  bottom: calc(100% + 0.3rem);
+  right: 0.3rem;
+  background: rgba(254, 240, 138, 0.95);
+  border-radius: 4px;
+  padding: 0.4rem;
+  z-index: 9999; /* Max z-index to ensure on top */
+  display: ${isQualityMenuOpen ? 'block' : 'none'};
+  color: #450a0a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.quality-option {
+  padding: 0.25rem 0.4rem;
+  color: #450a0a;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.2s ease;
+}
+
+.quality-option:hover {
+  background: #fffbeb;
+}
+
+.quality-option.selected {
+  background: #450a0a;
+  color: #fef08a;
+}
+
+          .mobile-toggle-button {
+            position: fixed;
+            bottom: ${showControls ? '80px' : '20px'};
+            right: 20px;
             width: 56px;
             height: 56px;
-            background: #8b5cf6;
-            color: white;
+            background: #fef08a;
+            color: #450a0a;
             display: none;
             align-items: center;
             justify-content: center;
@@ -498,10 +691,36 @@ export default function CourseLearn() {
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             z-index: 1000;
             cursor: pointer;
-            transition: transform 0.2s ease-in-out;
+            transition: transform 0.2s ease-in-out, bottom 0.3s ease-in-out;
           }
           .mobile-toggle-button:hover {
             transform: scale(1.1);
+          }
+          .sidebar {
+            width: 100%;
+            max-width: clamp(250px, 30vw, 320px);
+          }
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #fef08a;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #450a0a;
+            border-radius: 4px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #300707;
+          }
+          .completed-icon {
+            color: #450a0a;
+          }
+          h1, h2, h3, h4 {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+          }
+          p, span {
+            font-size: clamp(0.875rem, 2vw, 1rem);
           }
           @media (max-width: 1023px) {
             .mobile-toggle-button {
@@ -514,107 +733,48 @@ export default function CourseLearn() {
               height: 100%;
               width: 100%;
               max-width: 320px;
-              background: #fefce8;
-              border-left: 1px solid #e5e7eb;
+              border-left: 1px solid #450a0a;
               z-index: 900;
               transform: translateX(${isSidebarOpen ? '0' : '100%'});
               transition: transform 0.3s ease-in-out;
+              color: #450a0a;
             }
           }
-          .video-container {
-            position: relative;
-            width: 100%;
-            max-width: 100%;
+          @media (max-width: 640px) {
+            .video-controls {
+              padding: 0.3rem 0.5rem;
+            }
+            .controls-row {
+             
+              align-items: flex-start;
+            }
+            .right-controls {
+              justify-content: flex-start;
+            }
+            .quality-menu {
+              right: 0.3rem;
+              max-width: 120px;
+            }
           }
-          .video-controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.7);
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+          @media (min-width: 1024px) {
+            .sidebar {
+              max-width: 384px;
+            }
           }
-          .progress-container {
-            width: 100%;
-            height: 5px;
-            background: rgba(255,255,255,0.3);
-            cursor: pointer;
-          }
-          .progress-bar {
-            height: 100%;
-            background: #8b5cf6;
-            transition: width 0.1s;
-          }
-          .controls-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          .left-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          .right-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          .control-button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-          }
-          .volume-container {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-          }
-          .volume-slider {
-            width: 80px;
-            cursor: pointer;
-          }
-          .time-display {
-            color: white;
-            font-size: 12px;
-          }
-          .quality-option {
-            padding: 5px 10px;
-            color: white;
-            cursor: pointer;
-          }
-          .quality-option:hover {
-            background: rgba(255,255,255,0.1);
-          }
-          .quality-option.selected {
-            background: #8b5cf6;
-          }
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #555;
-          }
-          .completed-icon {
-            color: #10b981;
+          @media (min-width: 1921px) and (display-mode: fullscreen) {
+            .video-controls {
+              padding: 1rem 2rem;
+            }
+            .progress-container {
+              height: 0.6rem;
+            }
           }
         `}
       </style>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {(!isSidebarOpen || window.innerWidth >= 1024) && (
-          <header className="bg-yellow-50border-b border-gray-200 sticky top-0 z-30">
+          <header className="bg-yellow-50 border-b border-gray-200 sticky top-0 z-30">
             <div className="py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
@@ -623,11 +783,11 @@ export default function CourseLearn() {
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                     aria-label="Go back"
                   >
-                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-red-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                   </button>
-                  <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">{course?.course_name}</h1>
+                  <h1 className="text-base sm:text-lg font-bold text-red-950 truncate">{course?.course_name}</h1>
                 </div>
                 <div className="hidden sm:flex items-center space-x-2 text-xs sm:text-sm text-gray-600 font-medium flex-shrink-0">
                   <span>{videos.length} videos</span>
@@ -676,26 +836,45 @@ export default function CourseLearn() {
 
                         <div className="controls-row">
                           <div className="left-controls">
+                            <button
+                              className="control-button"
+                              onClick={handlePreviousVideo}
+                              disabled={currentVideoIndex === 0}
+                              aria-label="Previous video"
+                            >
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                              </svg>
+                            </button>
                             <button className="control-button" onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'}>
                               {isPlaying ? (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                   <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                                 </svg>
                               ) : (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                   <path d="M8 5v14l11-7z" />
                                 </svg>
                               )}
                             </button>
-
+                            <button
+                              className="control-button"
+                              onClick={handleNextVideo}
+                              disabled={currentVideoIndex === videos.length - 1}
+                              aria-label="Next video"
+                            >
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 6h-2v12h2zm-11.5 6L15 6v12z" />
+                              </svg>
+                            </button>
                             <div className="volume-container">
                               <button className="control-button" onClick={toggleMute} aria-label={volume === 0 ? 'Unmute' : 'Mute'}>
                                 {volume === 0 ? (
-                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
                                   </svg>
                                 ) : (
-                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
                                   </svg>
                                 )}
@@ -711,12 +890,10 @@ export default function CourseLearn() {
                                 aria-label="Volume control"
                               />
                             </div>
-
                             <div className="time-display">
                               {formatTime(currentTime)} / {formatTime(duration)}
                             </div>
                           </div>
-
                           <div className="right-controls">
                             {qualityLevels.length > 0 && (
                               <div className="relative">
@@ -725,7 +902,7 @@ export default function CourseLearn() {
                                   onClick={toggleQualityMenu}
                                   aria-label="Select video quality"
                                 >
-                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm-7 7H3v4c0 1.1.9 2 2 2h4v-2H5v-4zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4z" />
                                   </svg>
                                 </button>
@@ -747,18 +924,17 @@ export default function CourseLearn() {
                                 )}
                               </div>
                             )}
-
                             <button
                               className="control-button"
                               onClick={toggleFullscreen}
                               aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                             >
                               {isFullscreen ? (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                   <path d="M7 16h3v3h2v-5H7v2zm3-8H7v2h5V7h-2v1zm6 11h2v-3h3v-2h-5v5zm2-11V7h-2v5h5v-2h-3z" />
                                 </svg>
                               ) : (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                                   <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 17h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
                                 </svg>
                               )}
@@ -817,7 +993,7 @@ export default function CourseLearn() {
                           </span>
                         )}
                         <span className="hidden sm:inline text-gray-400">•</span>
-                        <span className="max-w-xs truncate font-semibold text-purple-700">{course?.course_name}</span>
+                        <span className="max-w-xs truncate font-semibold text-red-950">{course?.course_name}</span>
                       </div>
                     </div>
                   </div>
@@ -843,28 +1019,26 @@ export default function CourseLearn() {
                           <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                         </svg>
                       </div>
-                      <h3 className="text-xl font-semibold text-red-950" >About this course</h3>
+                      <h3 className="text-xl font-semibold text-red-950">About this course</h3>
                     </div>
 
                     <div className="space-y-5">
-                      <p className="text-justify leading-relaxed text-base text-red-950 ">
+                      <p className="text-justify leading-relaxed text-base text-red-950">
                         {course?.description || 'Course description will be loaded dynamically from the database.'}
                       </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {course?.instructor && (
-                          <div className="flex items-start gap-3 p-3 bg-red-950  text-yellow-50 rounded-none border border-gray-100">
-                           
+                          <div className="flex items-start gap-3 p-3 bg-red-950 text-yellow-50 rounded-none border border-gray-100">
                             <div>
                               <span className="block text-sm font-medium text-yellow-50">Instructor</span>
-                              <span className="text-yellow-50  font-semibold">{course.instructor}</span>
+                              <span className="text-yellow-50 font-semibold">{course.instructor}</span>
                             </div>
                           </div>
                         )}
 
                         {course?.category && (
-                          <div className="flex items-start gap-3 p-3 bg-red-950  text-yellow-50  rounded-none border border-gray-100">
-                          
+                          <div className="flex items-start gap-3 p-3 bg-red-950 text-yellow-50 rounded-none border border-gray-100">
                             <div>
                               <span className="block text-sm font-medium text-yellow-50">Category</span>
                               <span className="text-yellow-50 font-semibold">{course.category}</span>
@@ -874,7 +1048,6 @@ export default function CourseLearn() {
 
                         {course?.level && (
                           <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-none border border-gray-100">
-                           
                             <div>
                               <span className="block text-sm font-medium text-gray-500">Level</span>
                               <span className="text-gray-900 font-semibold">{course.level}</span>
@@ -890,11 +1063,11 @@ export default function CourseLearn() {
           </div>
 
           <div
-            className={`sidebar lg:static top-0 right-0 h-full w-full sm:w-80 lg:w-96 bg-yellow-50 border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 px-4 sm:p-0 ${
+            className={`sidebar lg:static top-0 right-0 h-full bg-yellow-50 border-l border-gray-200 transition-transform duration-300 ease-in-out z-50 flex flex-col translate-x-0 lg:translate-x-0 ${
               isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
             } lg:translate-x-0 flex flex-col`}
           >
-            <div className="p-4 border-b border-gray-200 bg-red-950 flex-shrink-0">
+            <div className="p-4 border-b border-gray-200 bg-red-950 flex-shrink-0 w-full sm:w-auto">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm sm:text-base font-semibold text-yellow-50 truncate">{course?.course_name}</h3>
@@ -909,14 +1082,14 @@ export default function CourseLearn() {
                   className="p-1 hover:bg-gray-200 rounded-none transition-colors lg:hidden"
                   aria-label="Close sidebar"
                 >
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-yellow-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-150 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
               {videos.length > 0 ? (
                 videos.map((video, index) => {
                   const isSelected = selectedVideo?.id === video.id;
@@ -925,8 +1098,8 @@ export default function CourseLearn() {
                   return (
                     <div
                       key={video.id}
-                      className={`flex items-start p-3 sm:p-4 cursor-pointer hover:bg-red-300   transition-colors border-b border-gray-100 ${
-                        isSelected ? 'bg-red-200 border-l-4 border-red-950 ' : ''
+                      className={`flex items-start p-3 sm:p-4 cursor-pointer hover:bg-red-300 transition-colors border-b border-gray-100 ${
+                        isSelected ? 'bg-red-200 border-l-4 border-red-950' : ''
                       }`}
                       onClick={() => handleVideoSelect(video)}
                       role="button"
@@ -995,27 +1168,27 @@ export default function CourseLearn() {
                 </div>
               )}
             </div>
-
-            <button
-              onClick={toggleSidebar}
-              className="mobile-toggle-button"
-              aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
           </div>
-
-          {isSidebarOpen && (
-            <div
-              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-              onClick={toggleSidebar}
-              aria-hidden="true"
-            ></div>
-          )}
         </div>
       </div>
+
+      <button
+        onClick={toggleSidebar}
+        className="mobile-toggle-button"
+        aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={toggleSidebar}
+          aria-hidden="true"
+        ></div>
+      )}
     </div>
   );
 }
