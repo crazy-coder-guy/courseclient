@@ -41,12 +41,15 @@ function SignUpForm() {
 
       try {
         const response = await apiFetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/check`
+          `${import.meta.env.VITE_API_URL}/api/auth/check`
         );
         console.log(`[${new Date().toISOString()}] Auth check successful:`, response);
         navigate(redirectUrl, { replace: true });
       } catch (err) {
-        console.error(`[${new Date().toISOString()}] Auth check failed:`, err.message);
+        console.error(`[${new Date().toISOString()}] Auth check failed:`, {
+          message: err.message,
+          stack: err.stack,
+        });
         setError('Session expired or invalid. Please sign in again.');
         localStorage.clear();
         document.cookie = 'token=; Max-Age=0; path=/;';
@@ -93,7 +96,10 @@ function SignUpForm() {
     setLoading(true);
 
     try {
-      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const BASE_URL = import.meta.env.VITE_API_URL;
+      if (!BASE_URL) {
+        throw new Error('API URL is not configured. Please contact support.');
+      }
       const url = isLogin ? `${BASE_URL}/api/auth/signin` : `${BASE_URL}/api/auth/signup`;
 
       const payload = isLogin
@@ -130,13 +136,19 @@ function SignUpForm() {
         console.log(`[${new Date().toISOString()}] Token verified post-sign-in/up`);
         navigate(redirectUrl, { replace: true });
       } catch (verifyErr) {
-        console.error(`[${new Date().toISOString()}] Token verification failed post-sign-in/up:`, verifyErr.message);
+        console.error(`[${new Date().toISOString()}] Token verification failed post-sign-in/up:`, {
+          message: verifyErr.message,
+          stack: verifyErr.stack,
+        });
         setError('Authentication failed. Please try again.');
         localStorage.clear();
         document.cookie = 'token=; Max-Age=0; path=/;';
       }
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Sign-in/up error:`, error.message);
+      console.error(`[${new Date().toISOString()}] Sign-in/up error:`, {
+        message: error.message,
+        stack: error.stack,
+      });
       setError(error.message === 'Unauthorized: Please sign in again' ? error.message : `Sign-in failed: ${error.message}`);
     } finally {
       setLoading(false);

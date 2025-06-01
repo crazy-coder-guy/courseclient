@@ -46,6 +46,9 @@ export const apiFetch = async (url, options = {}) => {
       error: error.message,
       stack: error.stack,
     });
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('Unable to connect to the server. Please check your network or contact support.');
+    }
     throw error;
   }
 };
