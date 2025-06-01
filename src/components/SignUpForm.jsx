@@ -32,6 +32,7 @@ function SignUpForm() {
         token: token ? token.substring(0, 10) + '...' : 'missing',
         cookies: document.cookie.includes('token=') ? 'present' : 'missing',
         userAgent: navigator.userAgent,
+        VITE_API_URL: import.meta.env.VITE_API_URL || 'https://coursebackend-io7z.onrender.com',
       });
 
       if (!token && !document.cookie.includes('token=')) {
@@ -50,7 +51,7 @@ function SignUpForm() {
         });
         setError('Session expired or invalid. Please sign in again.');
         localStorage.clear();
-        document.cookie = 'token=; Max-Age=0; path=/;';
+        document.cookie = 'token=; Max-Age=0; path=/; SameSite=Strict;';
       }
     };
 
@@ -138,6 +139,9 @@ function SignUpForm() {
             message: verifyErr.message,
             stack: verifyErr.stack,
           });
+          if (verifyErr.message.includes('ERR_CONNECTION_REFUSED')) {
+            console.error(`[${new Date().toISOString()}] Network error, retrying...`);
+          }
           lastError = verifyErr;
           retries--;
           if (retries > 0) {
@@ -152,7 +156,7 @@ function SignUpForm() {
       });
       setError('Authentication failed. Please try again.');
       localStorage.clear();
-      document.cookie = 'token=; Max-Age=0; path=/;';
+      document.cookie = 'token=; Max-Age=0; path=/; SameSite=Strict;';
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Sign-in/up error:`, {
         message: error.message,
