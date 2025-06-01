@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Menu, X, User, ChevronDown } from 'lucide-react';
-import axios from 'axios';
+import { apiFetch, TokenManager } from '../utils/api'; // Import apiFetch and TokenManager
 
 export default function ModernNavbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,7 +13,7 @@ export default function ModernNavbar() {
   const [userData, setUserData] = useState(null);
   const [purchasedCourses, setPurchasedCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [chatStep, setChatStep] = useState('welcome'); // welcome, course-selection, action-selection, doubt-input
+  const [chatStep, setChatStep] = useState('welcome');
   const [selectedAction, setSelectedAction] = useState(null);
   const [isWelcomeShown, setIsWelcomeShown] = useState(false);
   const navigate = useNavigate();
@@ -22,25 +22,28 @@ export default function ModernNavbar() {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = TokenManager.getToken();
         if (!token) {
+          console.log(`[${new Date().toISOString()}] No token found, user not logged in`);
           setIsLoggedIn(false);
           return;
         }
 
-        // Verify token with backend
-        const response = await axios.get('http://localhost:5000/api/auth/check', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.data.user) {
+        // Verify token with backend using apiFetch
+        const response = await apiFetch('/api/auth/check');
+        if (response.user) {
+          console.log(`[${new Date().toISOString()}] Auth check successful`, {
+            userId: response.user.userId,
+            email: response.user.email,
+          });
           setIsLoggedIn(true);
-          setUserData(response.data.user);
+          setUserData(response.user);
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
-        localStorage.removeItem('token');
+        console.error(`[${new Date().toISOString()}] Auth check failed:`, error.message);
+        TokenManager.removeToken();
         setIsLoggedIn(false);
+        setUserData(null);
       }
     };
 
@@ -53,15 +56,7 @@ export default function ModernNavbar() {
 
     const fetchPurchasedCourses = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setChatError('Please log in to access chat.');
-          return;
-        }
-
-        const { data } = await axios.get('http://localhost:5000/api/user/purchased-courses', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await apiFetch('/api/user/purchased-courses');
         setPurchasedCourses(data);
         
         // Show welcome message if not shown yet
@@ -76,7 +71,7 @@ export default function ModernNavbar() {
           setChatStep('course-selection');
         }
       } catch (err) {
-        console.error('Error fetching purchased courses:', err);
+        console.error(`[${new Date().toISOString()}] Error fetching purchased courses:`, err.message);
         setChatError('Failed to load your courses. Please try again later.');
       }
     };
@@ -90,17 +85,14 @@ export default function ModernNavbar() {
 
     const fetchMessages = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const { data } = await axios.get(`http://localhost:5000/api/messages/${selectedCourse.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await apiFetch(`/api/messages/${selectedCourse.id}`);
         
         // Keep welcome message and add course-specific messages
         const welcomeMsg = messages.find(msg => msg.id === 'welcome');
         const courseMessages = welcomeMsg ? [welcomeMsg, ...data] : data;
         setMessages(courseMessages);
       } catch (err) {
-        console.error('Error fetching chat history:', err);
+        console.error(`[${new Date().toISOString()}] Error fetching chat history:`, err.message);
         setChatError('Failed to load chat history. Please try again later.');
       }
     };
@@ -154,20 +146,13 @@ export default function ModernNavbar() {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setChatError('Please log in to send messages.');
-        return;
-      }
-
-      const { data } = await axios.post(
-        `http://localhost:5000/api/messages/${selectedCourse.id}`,
-        { 
+      const { data } = await apiFetch(`/api/messages/${selectedCourse.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ 
           content: messageType === 'help' ? null : newMessage,
           message_type: messageType
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        }),
+      });
 
       // Add user message and auto response to chat
       const newMessages = [];
@@ -190,7 +175,7 @@ export default function ModernNavbar() {
         setChatStep('action-selection');
       }
     } catch (err) {
-      console.error('Error sending message:', err);
+      console.error(`[${new Date().toISOString()}] Error sending message:`, err.message);
       setChatError('Failed to send message. Please try again later.');
     }
   };
@@ -209,7 +194,7 @@ export default function ModernNavbar() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    TokenManager.removeToken();
     setIsLoggedIn(false);
     setUserData(null);
     navigate('/');
@@ -224,7 +209,7 @@ export default function ModernNavbar() {
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-md text-rose-900  hover:bg-gray-100"
+              className="md:hidden p-2 rounded-md text-rose-900 hover:bg-gray-100"
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -246,13 +231,12 @@ export default function ModernNavbar() {
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-rose-900" />
               </div>
-             <input
-  type="text"
-  placeholder="Search for anything"
-  disabled
-  className="block w-full pl-10 pr-3 py-2 border border-gray-500 rounded-full leading-5 bg-yellow-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-rose-900 focus:border-transparent text-sm opacity-80 cursor-not-allowed"
-/>
-
+              <input
+                type="text"
+                placeholder="Search for anything"
+                disabled
+                className="block w-full pl-10 pr-3 py-2 border border-gray-500 rounded-full leading-5 bg-yellow-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-rose-900 focus:border-transparent text-sm opacity-80 cursor-not-allowed"
+              />
             </div>
           </div>
 
@@ -262,8 +246,7 @@ export default function ModernNavbar() {
             <div className="hidden lg:flex items-center space-x-6">
               <button
                 onClick={() => navigate('/my-learnings')}
-                className="text-rose-900 hover:text-rose-900 text-sm font-medium transition-colors
-"
+                className="text-rose-900 hover:text-rose-900 text-sm font-medium transition-colors"
               >
                 My Learning
               </button>
@@ -274,7 +257,7 @@ export default function ModernNavbar() {
               {/* Notifications - Chat Trigger */}
               <button
                 onClick={handleChatOpen}
-              className="p-2 text-rose-900 hover:text-rose-900 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 text-rose-900 hover:text-rose-900 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <Bell size={20} />
               </button>
@@ -296,8 +279,12 @@ export default function ModernNavbar() {
                 </div>
               ) : (
                 <button
-                  onClick={() => navigate('/signup')}
-                 className="px-4 py-2 text-sm font-mediumtext-rose-900 hover:text-rose-900 transition-colors"
+                  onClick={() => {
+                    const currentUrl = window.location.pathname + window.location.search;
+                    sessionStorage.setItem('redirectAfterSignup', currentUrl);
+                    navigate(`/signup?redirect=${encodeURIComponent(currentUrl)}`);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-rose-900 hover:text-rose-900 transition-colors"
                 >
                   Log in
                 </button>
@@ -305,9 +292,6 @@ export default function ModernNavbar() {
             </div>
           </div>
         </div>
-
-        {/* Mobile Search Bar */}
-  
       </div>
 
       {/* Chat Interface */}
@@ -342,7 +326,7 @@ export default function ModernNavbar() {
                   <p className="text-rose-900 text-sm mb-4">Please log in to access the course assistant</p>
                   <button
                     onClick={() => navigate('/signup')}
-                   className="px-4 py-2 bg-rose-900 text-white rounded-full text-sm hover:bg-rose-900/90 transition-colors"
+                    className="px-4 py-2 bg-rose-900 text-white rounded-full text-sm hover:bg-rose-900/90 transition-colors"
                   >
                     Log in
                   </button>
@@ -431,7 +415,7 @@ export default function ModernNavbar() {
                       }
                     }}
                     placeholder="Type your doubt (max 50 characters)..."
-                   className="flex-1 px-3 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-rose-900"
                     maxLength={50}
                   />
                   <button
@@ -455,8 +439,7 @@ export default function ModernNavbar() {
           <div className="px-2 pt-2 pb-3 space-y-1">
             <button
               onClick={() => navigate('/my-learnings')}
-          className="block w-full text-left px-3 py-2 text-base font-mediumtext-rose-900 hover:text-rose-900 text-sm font-medium transition-colors
- hover:text-rose-900 hover:bg-gray-100 rounded-md"
+              className="block w-full text-left px-3 py-2 text-base font-medium text-rose-900 hover:text-rose-900 hover:bg-gray-100 rounded-md"
             >
               My Learning
             </button>
@@ -478,13 +461,11 @@ export default function ModernNavbar() {
                 </>
               ) : (
                 <button
-onClick={() => {
-  const currentUrl = window.location.pathname + window.location.search;
-  sessionStorage.setItem('redirectAfterSignup', currentUrl);
-  navigate(`/signup?redirect=${encodeURIComponent(currentUrl)}`);
-}}
-
-
+                  onClick={() => {
+                    const currentUrl = window.location.pathname + window.location.search;
+                    sessionStorage.setItem('redirectAfterSignup', currentUrl);
+                    navigate(`/signup?redirect=${encodeURIComponent(currentUrl)}`);
+                  }}
                   className="flex-1 px-4 py-2 text-sm font-medium bg-red-950 text-white rounded hover:bg-gray-800 transition-colors"
                 >
                   Sign up

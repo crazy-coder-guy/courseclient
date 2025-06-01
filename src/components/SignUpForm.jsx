@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { apiFetch, isLocalStorageAvailable } from '../utils/api';
+import { apiFetch, isLocalStorageAvailable, TokenManager } from '../utils/api';
 
 function SignUpForm() {
   const [isLogin, setIsLogin] = useState(false);
@@ -27,7 +27,7 @@ function SignUpForm() {
         return;
       }
 
-      const token = localStorage.getItem('token');
+      const token = TokenManager.getToken();
       console.log(`[${new Date().toISOString()}] Token check:`, {
         token: token ? token.substring(0, 10) + '...' : 'missing',
         cookies: document.cookie.includes('token=') ? 'present' : 'missing',
@@ -51,8 +51,7 @@ function SignUpForm() {
           VITE_API_URL: import.meta.env.VITE_API_URL,
         });
         setError('Session expired or invalid. Please sign in again.');
-        localStorage.clear();
-        document.cookie = 'token=; Max-Age=0; path=/; SameSite=Strict;';
+        TokenManager.removeToken();
       }
     };
 
@@ -120,7 +119,8 @@ function SignUpForm() {
         token: data.token.substring(0, 10) + '...',
       });
 
-      localStorage.setItem('token', data.token);
+      // Use TokenManager to store token
+      TokenManager.setToken(data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('email', data.user.email);
       localStorage.setItem('firstName', data.user.first_name || '');
@@ -155,8 +155,7 @@ function SignUpForm() {
         VITE_API_URL: import.meta.env.VITE_API_URL,
       });
       setError('Authentication failed. Please try again.');
-      localStorage.clear();
-      document.cookie = 'token=; Max-Age=0; path=/; SameSite=Strict;';
+      TokenManager.removeToken();
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Sign-in/up error:`, {
         message: error.message,
