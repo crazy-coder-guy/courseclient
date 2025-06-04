@@ -50,38 +50,61 @@ export default function Footer() {
           </div>
 
           {/* Support */}
-          <div>
-            <h4 className="text-xl font-bold text-yellow-50 mb-6 relative">
-              Support
-              <div className="absolute -bottom-2 left-0 w-12 h-0.5 bg-gradient-to-r from-rose-400 to-pink-400"></div>
-            </h4>
-            <ul className="space-y-4">
-              {['Help Center', 'Contact Us', 'Live Chat', 'Community', 'Tutorials'].map((item) => (
-                <li key={item}>
-                  <a href="#" className="text-yellow-50 hover:text-white transition-colors duration-300 hover:translate-x-2 transform inline-block">
-                    {item}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div>
+  <h4 className="text-xl font-bold text-yellow-50 mb-6 relative">
+    Support
+    <div className="absolute -bottom-2 left-0 w-12 h-0.5 bg-gradient-to-r from-rose-400 to-pink-400"></div>
+  </h4>
+  <ul className="space-y-4">
+ 
+    <li>
+      <a
+        href="mailto:thugilcreation@gmail.com"
+        className="text-yellow-50 hover:text-white transition-colors duration-300 hover:translate-x-2 transform inline-block"
+      >
+        thugilcreation@gmail.com
+      </a>
+    </li>
+  </ul>
+</div>
+
         </div>
 
         {/* Bottom Section */}
-        <div className="border-t border-rose-700/50 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-yellow-50 text-sm mb-4 md:mb-0">
-              © 2024 Thugil Creation. All rights reserved. Preserving tradition through innovation.
-            </p>
-            <div className="flex space-x-6 text-sm">
-              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
-                <a key={item} href="#" className="text-yellow-50 hover:text-white transition-colors">
-                  {item}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
+       <div className="border-t border-rose-700/50 pt-8">
+  <div className="flex flex-col md:flex-row justify-between items-center">
+    <p className="text-yellow-50 text-sm mb-4 md:mb-0">
+      © 2025 Thugil Creation. All rights reserved. Preserving tradition through innovation.
+    </p>
+    <div className="flex space-x-6 text-sm">
+      <a
+        href="https://www.thugilcreation.com/thugilcreation-Policy.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-yellow-50 hover:text-white transition-colors"
+      >
+        Privacy Policy
+      </a>
+      <a
+        href="https://www.thugilcreation.com/thugilcreation-Policy.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-yellow-50 hover:text-white transition-colors"
+      >
+        Terms of Service
+      </a>
+      <a
+        href="https://www.thugilcreation.com/thugilcreation-Policy.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-yellow-50 hover:text-white transition-colors"
+      >
+        Cookie Policy
+      </a>
+    </div>
+  </div>
+</div>
+
       </div>
     </footer>
   );
